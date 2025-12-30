@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>典型的 “预设令牌可预测/可篡改” 的任意密码重置漏洞 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="漏洞核心原理1. 正常流程123451. 用户点击“忘记密码”2. 系统生成唯一的、随机的重置令牌（token）3. 发送包含令牌的链接到用户邮箱：reset.php?token&#x3D;随机值4. 用户点击链接，系统验证令牌有效性5. 允许重置密码  2. 漏洞场景123456789101112131. 攻击者点击“忘记密码”，输入目标用户名（如：admin）2. 系统预设一个令牌，但算法有缺陷：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="典型的 “预设令牌可预测&#x2F;可篡改” 的任意密码重置漏洞">
+<meta property="og:url" content="http://example.com/2025/12/15/%E5%85%B8%E5%9E%8B%E7%9A%84-%E2%80%9C%E9%A2%84%E8%AE%BE%E4%BB%A4%E7%89%8C%E5%8F%AF%E9%A2%84%E6%B5%8B-%E5%8F%AF%E7%AF%A1%E6%94%B9%E2%80%9D-%E7%9A%84%E4%BB%BB%E6%84%8F%E5%AF%86%E7%A0%81%E9%87%8D%E7%BD%AE%E6%BC%8F%E6%B4%9E/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="漏洞核心原理1. 正常流程123451. 用户点击“忘记密码”2. 系统生成唯一的、随机的重置令牌（token）3. 发送包含令牌的链接到用户邮箱：reset.php?token&#x3D;随机值4. 用户点击链接，系统验证令牌有效性5. 允许重置密码  2. 漏洞场景123456789101112131. 攻击者点击“忘记密码”，输入目标用户名（如：admin）2. 系统预设一个令牌，但算法有缺陷：">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-12-15T11:41:06.000Z">
+<meta property="article:modified_time" content="2025-12-15T11:42:08.811Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="src">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fork-awesome@1.2.0/css/fork-awesome.min.css">
+
+<meta name="generator" content="Hexo 8.1.1"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-典型的-“预设令牌可预测-可篡改”-的任意密码重置漏洞" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2025/12/15/%E5%85%B8%E5%9E%8B%E7%9A%84-%E2%80%9C%E9%A2%84%E8%AE%BE%E4%BB%A4%E7%89%8C%E5%8F%AF%E9%A2%84%E6%B5%8B-%E5%8F%AF%E7%AF%A1%E6%94%B9%E2%80%9D-%E7%9A%84%E4%BB%BB%E6%84%8F%E5%AF%86%E7%A0%81%E9%87%8D%E7%BD%AE%E6%BC%8F%E6%B4%9E/" class="article-date">
+  <time class="dt-published" datetime="2025-12-15T11:41:06.000Z" itemprop="datePublished">2025-12-15</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      典型的 “预设令牌可预测/可篡改” 的任意密码重置漏洞
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h2 id="漏洞核心原理"><a href="#漏洞核心原理" class="headerlink" title="漏洞核心原理"></a>漏洞核心原理</h2><h3 id="1-正常流程"><a href="#1-正常流程" class="headerlink" title="1. 正常流程"></a>1. <strong>正常流程</strong></h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. 用户点击“忘记密码”</span><br><span class="line">2. 系统生成唯一的、随机的重置令牌（token）</span><br><span class="line">3. 发送包含令牌的链接到用户邮箱：reset.php?token=随机值</span><br><span class="line">4. 用户点击链接，系统验证令牌有效性</span><br><span class="line">5. 允许重置密码</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-漏洞场景"><a href="#2-漏洞场景" class="headerlink" title="2. 漏洞场景"></a>2. <strong>漏洞场景</strong></h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">1. 攻击者点击“忘记密码”，输入目标用户名（如：admin）</span><br><span class="line">2. 系统预设一个令牌，但算法有缺陷：</span><br><span class="line">   - 可能基于：用户名+时间戳（可预测）</span><br><span class="line">   - 或使用：MD5(用户名)（固定值）</span><br><span class="line">   - 或直接：token=用户名（最糟糕的情况）</span><br><span class="line">   </span><br><span class="line">3. 攻击者可以：</span><br><span class="line">   - 预测出admin的令牌</span><br><span class="line">   - 或发现令牌就是&quot;admin&quot;本身</span><br><span class="line">   - 或通过枚举获取有效令牌</span><br><span class="line">   </span><br><span class="line">4. 直接访问：reset.php?token=admin（或预测值）</span><br><span class="line">5. 系统验证token=&quot;admin&quot;有效，允许重置管理员密码</span><br></pre></td></tr></table></figure>
+
+<h2 id="常见缺陷类型"><a href="#常见缺陷类型" class="headerlink" title="常见缺陷类型"></a>常见缺陷类型</h2><h3 id="类型1：令牌直接等于用户名"><a href="#类型1：令牌直接等于用户名" class="headerlink" title="类型1：令牌直接等于用户名"></a><strong>类型1：令牌直接等于用户名</strong></h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 错误示例</span></span><br><span class="line"><span class="variable">$token</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;username&#x27;</span>];  <span class="comment">// token直接使用用户名</span></span><br><span class="line"><span class="keyword">if</span> (<span class="title function_ invoke__">check_token</span>(<span class="variable">$token</span>)) &#123;</span><br><span class="line">    <span class="title function_ invoke__">allow_reset_password</span>(<span class="variable">$token</span>);  <span class="comment">// 直接用token作为用户标识</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="类型2：可预测的算法"><a href="#类型2：可预测的算法" class="headerlink" title="类型2：可预测的算法"></a><strong>类型2：可预测的算法</strong></h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 错误示例</span></span><br><span class="line"><span class="variable">$token</span> = <span class="title function_ invoke__">md5</span>(<span class="variable">$username</span> . <span class="title function_ invoke__">date</span>(<span class="string">&#x27;Ymd&#x27;</span>));  </span><br><span class="line"><span class="comment">// 每天所有用户的token都一样</span></span><br><span class="line"><span class="comment">// 或使用简单哈希：md5($username)</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="类型3：令牌可被篡改"><a href="#类型3：令牌可被篡改" class="headerlink" title="类型3：令牌可被篡改"></a><strong>类型3：令牌可被篡改</strong></h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 错误示例</span></span><br><span class="line"><span class="variable">$token</span> = <span class="title function_ invoke__">generate_token</span>();</span><br><span class="line"><span class="comment">// 但验证时只检查token是否存在，不验证对应关系</span></span><br><span class="line"><span class="keyword">if</span> (<span class="title function_ invoke__">token_exists</span>(<span class="variable">$_GET</span>[<span class="string">&#x27;token&#x27;</span>])) &#123;  <span class="comment">// 不验证属于哪个用户</span></span><br><span class="line">    <span class="title function_ invoke__">reset_user_password</span>(<span class="variable">$user_id</span>);   <span class="comment">// $user_id从其他地方获取</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="攻击示例"><a href="#攻击示例" class="headerlink" title="攻击示例"></a>攻击示例</h2><h3 id="案例1：直接替换参数"><a href="#案例1：直接替换参数" class="headerlink" title="案例1：直接替换参数"></a><strong>案例1：直接替换参数</strong></h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">正常重置链接：</span><br><span class="line">https://example.com/reset?token=8a7d6f9e...</span><br><span class="line"></span><br><span class="line">攻击者尝试：</span><br><span class="line">https://example.com/reset?token=admin</span><br><span class="line">或</span><br><span class="line">https://example.com/reset?token=1  （尝试小数字）</span><br></pre></td></tr></table></figure>
+
+<h3 id="案例2：修改用户名参数"><a href="#案例2：修改用户名参数" class="headerlink" title="案例2：修改用户名参数"></a><strong>案例2：修改用户名参数</strong></h3><figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/forgot-password</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/x-www-form-urlencoded</span><br><span class="line"></span><br><span class="line"><span class="language-ini"><span class="attr">username</span>=admin&amp;token=admin  <span class="comment"># 系统未验证token来源</span></span></span><br></pre></td></tr></table></figure>
+
+<h3 id="案例3：时间窗口攻击"><a href="#案例3：时间窗口攻击" class="headerlink" title="案例3：时间窗口攻击"></a><strong>案例3：时间窗口攻击</strong></h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 如果token基于：md5(username + YYYYMMDD)</span></span><br><span class="line"><span class="keyword">import</span> hashlib</span><br><span class="line"><span class="keyword">from</span> datetime <span class="keyword">import</span> datetime</span><br><span class="line"></span><br><span class="line">username = <span class="string">&quot;admin&quot;</span></span><br><span class="line">date_str = datetime.now().strftime(<span class="string">&quot;%Y%m%d&quot;</span>)</span><br><span class="line">token = hashlib.md5((username + date_str).encode()).hexdigest()</span><br><span class="line"><span class="comment"># 攻击者可以计算出今天的有效token</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="修复方案"><a href="#修复方案" class="headerlink" title="修复方案"></a>修复方案</h2><h3 id="1-使用强随机令牌"><a href="#1-使用强随机令牌" class="headerlink" title="1. 使用强随机令牌"></a>1. <strong>使用强随机令牌</strong></h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 正确做法</span></span><br><span class="line"><span class="variable">$token</span> = <span class="title function_ invoke__">bin2hex</span>(<span class="title function_ invoke__">random_bytes</span>(<span class="number">32</span>));  <span class="comment">// 256位随机令牌</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-严格验证"><a href="#2-严格验证" class="headerlink" title="2. 严格验证"></a>2. <strong>严格验证</strong></h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 必须验证token与用户的对应关系</span></span><br><span class="line"><span class="variable">$user</span> = <span class="title function_ invoke__">get_user_by_token</span>(<span class="variable">$_GET</span>[<span class="string">&#x27;token&#x27;</span>]);</span><br><span class="line"><span class="keyword">if</span> (!<span class="variable">$user</span>) &#123;</span><br><span class="line">    <span class="keyword">die</span>(<span class="string">&quot;Invalid token&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 重置该用户的密码，而不是token对应的用户</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-添加时效性"><a href="#3-添加时效性" class="headerlink" title="3. 添加时效性"></a>3. <strong>添加时效性</strong></h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 数据库设计</span></span><br><span class="line">reset_tokens:</span><br><span class="line"><span class="operator">-</span> token (<span class="keyword">PRIMARY KEY</span>)</span><br><span class="line"><span class="operator">-</span> user_id (<span class="keyword">FOREIGN KEY</span>)</span><br><span class="line"><span class="operator">-</span> expires_at (DATETIME)</span><br><span class="line"><span class="operator">-</span> used (<span class="type">BOOLEAN</span> <span class="keyword">default</span> <span class="literal">false</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-一次性使用"><a href="#4-一次性使用" class="headerlink" title="4. 一次性使用"></a>4. <strong>一次性使用</strong></h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 使用后立即失效</span></span><br><span class="line"><span class="keyword">if</span> (<span class="variable">$token_record</span>[<span class="string">&#x27;used&#x27;</span>]) &#123;</span><br><span class="line">    <span class="keyword">die</span>(<span class="string">&quot;Token already used&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="title function_ invoke__">mark_token_as_used</span>(<span class="variable">$token</span>);</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-日志记录"><a href="#5-日志记录" class="headerlink" title="5. 日志记录"></a>5. <strong>日志记录</strong></h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 记录所有重置请求</span></span><br><span class="line"><span class="title function_ invoke__">log_reset_attempt</span>(<span class="variable">$_SERVER</span>[<span class="string">&#x27;REMOTE_ADDR&#x27;</span>], <span class="variable">$username</span>, <span class="variable">$success</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="测试方法"><a href="#测试方法" class="headerlink" title="测试方法"></a>测试方法</h2><ol>
+<li>查看重置URL的token模式</li>
+<li>尝试修改token为其他用户的用户名</li>
+<li>尝试删除token参数</li>
+<li>测试token是否可重复使用</li>
+<li>检查token生成算法是否可预测</li>
+</ol>
+<p>这个漏洞的关键在于<strong>系统没有正确绑定令牌与用户的唯一对应关系</strong>，或者令牌本身缺乏足够的随机性和不可预测性。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2025/12/15/%E5%85%B8%E5%9E%8B%E7%9A%84-%E2%80%9C%E9%A2%84%E8%AE%BE%E4%BB%A4%E7%89%8C%E5%8F%AF%E9%A2%84%E6%B5%8B-%E5%8F%AF%E7%AF%A1%E6%94%B9%E2%80%9D-%E7%9A%84%E4%BB%BB%E6%84%8F%E5%AF%86%E7%A0%81%E9%87%8D%E7%BD%AE%E6%BC%8F%E6%B4%9E/" data-id="cuid5YISmq11WUmfjfMuELTj-" data-title="典型的 “预设令牌可预测/可篡改” 的任意密码重置漏洞" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/src/" rel="tag">src</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2025/12/15/%E4%B8%9A%E5%8A%A1%E9%80%BB%E8%BE%91%E6%BC%8F%E6%B4%9E%E4%B8%AD%E7%9A%84%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E7%AF%A1%E6%94%B9%E6%BC%8F%E6%B4%9E/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          业务逻辑漏洞中的客户端状态篡改漏洞
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2025/12/15/%E6%94%AF%E4%BB%98%E9%80%BB%E8%BE%91%E6%BC%8F%E6%B4%9E%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97%EF%BC%9A%E6%94%BB%E5%87%BB%E6%89%8B%E6%B3%95%E4%B8%8E%E9%98%B2%E5%BE%A1%E7%AD%96%E7%95%A5/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">支付逻辑漏洞完全指南：攻击手法与防御策略</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/src/" rel="tag">src</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/src/" style="font-size: 10px;">src</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2025/12/">December 2025</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2025/12/15/%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90%E4%B8%8E%E5%88%A9%E7%94%A8/">文件上传漏洞分析与利用</a>
+          </li>
+        
+          <li>
+            <a href="/2025/12/15/%E4%BB%BB%E6%84%8F%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90%E4%B8%8E%E5%88%A9%E7%94%A8/">任意文件下载漏洞分析与利用</a>
+          </li>
+        
+          <li>
+            <a href="/2025/12/15/%E4%BC%98%E6%83%A0%E5%88%B8%E7%B3%BB%E7%BB%9F%E5%AE%89%E5%85%A8%E6%94%BB%E9%98%B2%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/">优惠券系统安全攻防完全指南</a>
+          </li>
+        
+          <li>
+            <a href="/2025/12/15/%E4%B8%9A%E5%8A%A1%E8%B6%8A%E6%9D%83%E6%9F%A5%E8%AF%A2%E6%88%96%E6%95%B0%E6%8D%AE%E8%BF%87%E5%BA%A6%E6%9A%B4%E9%9C%B2/">业务越权查询或数据过度暴露</a>
+          </li>
+        
+          <li>
+            <a href="/2025/12/15/%E4%B8%9A%E5%8A%A1%E5%9B%9E%E9%80%80%E6%BC%8F%E6%B4%9E%EF%BC%9A%E5%8E%9F%E7%90%86%E3%80%81%E5%88%A9%E7%94%A8%E4%B8%8E%E5%8D%B1%E5%AE%B3%E5%8D%87%E7%BA%A7%E6%8C%87%E5%8D%97/">业务回退漏洞：原理、利用与危害升级指南</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2025 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>

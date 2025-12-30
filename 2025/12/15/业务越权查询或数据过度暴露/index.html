@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>业务越权查询或数据过度暴露 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="这是一个典型的业务逻辑漏洞，通常称为越权查询或数据过度暴露。 漏洞原理服务端允许用户查询数据，但未对查询参数的范围、数量、时间等做严格限制，导致用户可以：  查询不属于自己的数据 查询远超正常需求的数据量 遍历敏感信息  具体表现形式1. 垂直越权查询12普通用户查询订单：&#x2F;api&#x2F;order?order_id&#x3D;1001攻击者尝试：&#x2F;api&#x2F;order?order_id&#x3D;1002 （查看他人订单）">
+<meta property="og:type" content="article">
+<meta property="og:title" content="业务越权查询或数据过度暴露">
+<meta property="og:url" content="http://example.com/2025/12/15/%E4%B8%9A%E5%8A%A1%E8%B6%8A%E6%9D%83%E6%9F%A5%E8%AF%A2%E6%88%96%E6%95%B0%E6%8D%AE%E8%BF%87%E5%BA%A6%E6%9A%B4%E9%9C%B2/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="这是一个典型的业务逻辑漏洞，通常称为越权查询或数据过度暴露。 漏洞原理服务端允许用户查询数据，但未对查询参数的范围、数量、时间等做严格限制，导致用户可以：  查询不属于自己的数据 查询远超正常需求的数据量 遍历敏感信息  具体表现形式1. 垂直越权查询12普通用户查询订单：&#x2F;api&#x2F;order?order_id&#x3D;1001攻击者尝试：&#x2F;api&#x2F;order?order_id&#x3D;1002 （查看他人订单）">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-12-15T12:18:14.000Z">
+<meta property="article:modified_time" content="2025-12-15T12:18:35.387Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="src">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fork-awesome@1.2.0/css/fork-awesome.min.css">
+
+<meta name="generator" content="Hexo 8.1.1"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-业务越权查询或数据过度暴露" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2025/12/15/%E4%B8%9A%E5%8A%A1%E8%B6%8A%E6%9D%83%E6%9F%A5%E8%AF%A2%E6%88%96%E6%95%B0%E6%8D%AE%E8%BF%87%E5%BA%A6%E6%9A%B4%E9%9C%B2/" class="article-date">
+  <time class="dt-published" datetime="2025-12-15T12:18:14.000Z" itemprop="datePublished">2025-12-15</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      业务越权查询或数据过度暴露
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>这是一个典型的<strong>业务逻辑漏洞</strong>，通常称为<strong>越权查询</strong>或<strong>数据过度暴露</strong>。</p>
+<h2 id="漏洞原理"><a href="#漏洞原理" class="headerlink" title="漏洞原理"></a>漏洞原理</h2><p>服务端允许用户查询数据，但未对查询参数的范围、数量、时间等做严格限制，导致用户可以：</p>
+<ol>
+<li>查询不属于自己的数据</li>
+<li>查询远超正常需求的数据量</li>
+<li>遍历敏感信息</li>
+</ol>
+<h2 id="具体表现形式"><a href="#具体表现形式" class="headerlink" title="具体表现形式"></a>具体表现形式</h2><h3 id="1-垂直越权查询"><a href="#1-垂直越权查询" class="headerlink" title="1. 垂直越权查询"></a>1. <strong>垂直越权查询</strong></h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">普通用户查询订单：/api/order?order_id=1001</span><br><span class="line">攻击者尝试：/api/order?order_id=1002 （查看他人订单）</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-水平越权查询"><a href="#2-水平越权查询" class="headerlink" title="2. 水平越权查询"></a>2. <strong>水平越权查询</strong></h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">查询自己的历史日志：/api/logs?user_id=自己的ID</span><br><span class="line">修改参数：/api/logs?user_id=admin_id （查看管理员日志）</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-参数遍历"><a href="#3-参数遍历" class="headerlink" title="3. 参数遍历"></a>3. <strong>参数遍历</strong></h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">订单查询：/api/order?id=1001 → 1002 → 1003...</span><br><span class="line">日志查询：/api/logs?date=2024-01 → 遍历所有日期</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-无限制批量查询"><a href="#4-无限制批量查询" class="headerlink" title="4. 无限制批量查询"></a>4. <strong>无限制批量查询</strong></h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">本应一次查10条：/api/orders?limit=10</span><br><span class="line">攻击者改为：/api/orders?limit=10000 （拖库风险）</span><br></pre></td></tr></table></figure>
+
+<h2 id="结合业务提高危害的方法"><a href="#结合业务提高危害的方法" class="headerlink" title="结合业务提高危害的方法"></a>结合业务提高危害的方法</h2><h3 id="金融类业务"><a href="#金融类业务" class="headerlink" title="金融类业务"></a>金融类业务</h3><ul>
+<li><strong>银行交易记录</strong>：遍历他人转账记录、账户余额</li>
+<li><strong>投资记录</strong>：查看他人的投资组合、盈亏情况</li>
+<li><strong>贷款申请</strong>：获取他人的贷款材料、审批状态</li>
+</ul>
+<h3 id="电商类业务"><a href="#电商类业务" class="headerlink" title="电商类业务"></a>电商类业务</h3><ul>
+<li><strong>订单信息</strong>：获取他人的购买记录（可用于诈骗）</li>
+<li><strong>地址信息</strong>：批量导出用户收货地址</li>
+<li><strong>评价数据</strong>：查看商家未公开的差评投诉</li>
+</ul>
+<h3 id="社交类业务"><a href="#社交类业务" class="headerlink" title="社交类业务"></a>社交类业务</h3><ul>
+<li><strong>私信内容</strong>：遍历用户间的私密聊天</li>
+<li><strong>好友关系</strong>：映射整个社交网络图谱</li>
+<li><strong>浏览历史</strong>：获取他人的阅读、观看记录</li>
+</ul>
+<h3 id="企业类业务"><a href="#企业类业务" class="headerlink" title="企业类业务"></a>企业类业务</h3><ul>
+<li><strong>员工薪资</strong>：遍历工号查工资条</li>
+<li><strong>审批流程</strong>：查看公司内部敏感审批</li>
+<li><strong>客户资料</strong>：导出完整客户数据库</li>
+</ul>
+<h2 id="攻击升级手法"><a href="#攻击升级手法" class="headerlink" title="攻击升级手法"></a>攻击升级手法</h2><h3 id="1-数据关联分析"><a href="#1-数据关联分析" class="headerlink" title="1. 数据关联分析"></a>1. <strong>数据关联分析</strong></h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">1. 获取订单号 → 2. 关联用户ID → 3. 查询该用户所有信息</span><br><span class="line">4. 分析购买模式 → 5. 进行精准诈骗</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-信息拼图攻击"><a href="#2-信息拼图攻击" class="headerlink" title="2. 信息拼图攻击"></a>2. <strong>信息拼图攻击</strong></h3><p>从不同端点收集碎片信息：</p>
+<ul>
+<li>订单系统获取手机尾号</li>
+<li>物流系统获取完整地址</li>
+<li>支付系统获取银行卡类型</li>
+<li>组合成完整身份信息</li>
+</ul>
+<h3 id="3-自动化批量获取"><a href="#3-自动化批量获取" class="headerlink" title="3. 自动化批量获取"></a>3. <strong>自动化批量获取</strong></h3><p>编写脚本系统化收集：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 简化的攻击脚本示例</span></span><br><span class="line"><span class="keyword">for</span> order_id <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1000</span>, <span class="number">2000</span>):</span><br><span class="line">    data = query_order(order_id)</span><br><span class="line">    <span class="keyword">if</span> data:  <span class="comment"># 订单存在</span></span><br><span class="line">        save_to_database(data)</span><br><span class="line">        user_id = data[<span class="string">&#x27;user_id&#x27;</span>]</span><br><span class="line">        user_info = query_user(user_id)  <span class="comment"># 进一步查询用户信息</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-时间窗口利用"><a href="#4-时间窗口利用" class="headerlink" title="4. 时间窗口利用"></a>4. <strong>时间窗口利用</strong></h3><ul>
+<li>在业务高峰时发起大量查询，隐藏攻击行为</li>
+<li>利用系统备份时段进行数据抓取</li>
+</ul>
+<h2 id="业务影响程度排序"><a href="#业务影响程度排序" class="headerlink" title="业务影响程度排序"></a>业务影响程度排序</h2><p><strong>高危害</strong>：</p>
+<ol>
+<li><strong>金融数据</strong>：直接导致资金损失</li>
+<li><strong>身份信息</strong>：可用于身份盗用</li>
+<li><strong>商业机密</strong>：竞争优势丧失</li>
+<li><strong>健康数据</strong>：医疗隐私泄露</li>
+</ol>
+<p><strong>中危害</strong>：</p>
+<ol>
+<li><strong>消费习惯</strong>：精准营销滥用</li>
+<li><strong>社交关系</strong>：社会工程攻击</li>
+<li><strong>位置轨迹</strong>：物理安全威胁</li>
+</ol>
+<p><strong>低危害</strong>：</p>
+<ol>
+<li>公开信息过度收集</li>
+<li>非敏感统计数据</li>
+</ol>
+<h2 id="防御建议"><a href="#防御建议" class="headerlink" title="防御建议"></a>防御建议</h2><ol>
+<li><strong>强制访问控制</strong>：每次查询验证用户权限</li>
+<li><strong>查询范围限制</strong>：限制时间范围、数量上限</li>
+<li><strong>输入严格校验</strong>：拒绝异常参数组合</li>
+<li><strong>查询频率限制</strong>：防自动化遍历</li>
+<li><strong>结果脱敏处理</strong>：敏感字段部分隐藏</li>
+<li><strong>详细日志审计</strong>：监控异常查询模式</li>
+<li><strong>业务风险建模</strong>：不同数据不同保护级别</li>
+</ol>
+<h2 id="漏洞验证要点"><a href="#漏洞验证要点" class="headerlink" title="漏洞验证要点"></a>漏洞验证要点</h2><p>在测试时需验证：</p>
+<ul>
+<li>能否查询超出时间范围的数据</li>
+<li>能否访问他人业务数据</li>
+<li>单次查询量是否有限制</li>
+<li>参数是否可遍历、可批量</li>
+<li>错误信息是否泄露数据存在性</li>
+</ul>
+<p>这种漏洞的严重性<strong>完全取决于业务数据的重要性</strong>，在核心业务系统中可能造成灾难性后果。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2025/12/15/%E4%B8%9A%E5%8A%A1%E8%B6%8A%E6%9D%83%E6%9F%A5%E8%AF%A2%E6%88%96%E6%95%B0%E6%8D%AE%E8%BF%87%E5%BA%A6%E6%9A%B4%E9%9C%B2/" data-id="cuid4qKFIeMrApbGGejwX8_ij" data-title="业务越权查询或数据过度暴露" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/src/" rel="tag">src</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2025/12/15/%E4%BC%98%E6%83%A0%E5%88%B8%E7%B3%BB%E7%BB%9F%E5%AE%89%E5%85%A8%E6%94%BB%E9%98%B2%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          优惠券系统安全攻防完全指南
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2025/12/15/%E4%B8%9A%E5%8A%A1%E5%9B%9E%E9%80%80%E6%BC%8F%E6%B4%9E%EF%BC%9A%E5%8E%9F%E7%90%86%E3%80%81%E5%88%A9%E7%94%A8%E4%B8%8E%E5%8D%B1%E5%AE%B3%E5%8D%87%E7%BA%A7%E6%8C%87%E5%8D%97/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">业务回退漏洞：原理、利用与危害升级指南</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/src/" rel="tag">src</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/src/" style="font-size: 10px;">src</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2025/12/">December 2025</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2025/12/15/%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90%E4%B8%8E%E5%88%A9%E7%94%A8/">文件上传漏洞分析与利用</a>
+          </li>
+        
+          <li>
+            <a href="/2025/12/15/%E4%BB%BB%E6%84%8F%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90%E4%B8%8E%E5%88%A9%E7%94%A8/">任意文件下载漏洞分析与利用</a>
+          </li>
+        
+          <li>
+            <a href="/2025/12/15/%E4%BC%98%E6%83%A0%E5%88%B8%E7%B3%BB%E7%BB%9F%E5%AE%89%E5%85%A8%E6%94%BB%E9%98%B2%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97/">优惠券系统安全攻防完全指南</a>
+          </li>
+        
+          <li>
+            <a href="/2025/12/15/%E4%B8%9A%E5%8A%A1%E8%B6%8A%E6%9D%83%E6%9F%A5%E8%AF%A2%E6%88%96%E6%95%B0%E6%8D%AE%E8%BF%87%E5%BA%A6%E6%9A%B4%E9%9C%B2/">业务越权查询或数据过度暴露</a>
+          </li>
+        
+          <li>
+            <a href="/2025/12/15/%E4%B8%9A%E5%8A%A1%E5%9B%9E%E9%80%80%E6%BC%8F%E6%B4%9E%EF%BC%9A%E5%8E%9F%E7%90%86%E3%80%81%E5%88%A9%E7%94%A8%E4%B8%8E%E5%8D%B1%E5%AE%B3%E5%8D%87%E7%BA%A7%E6%8C%87%E5%8D%97/">业务回退漏洞：原理、利用与危害升级指南</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2025 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
