@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+  <!-- 元数据 -->
+  <meta charset="utf-8">
+  
+    <link rel="icon" href="/assets/favicon.png">
+  
+  
+  <title>第五期：Packet Capture - 进程间通信（IPMB） | wj-stack &#39;s Blog</title>
+  <link rel="canonical" href="https://wj-stack.github.io/2025/12/31/%E7%AC%AC%E4%BA%94%E6%9C%9F%EF%BC%9APacket-Capture-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1%EF%BC%88IPMB%EF%BC%89/">
+  <meta name="author" content="wj-stack" />
+  <meta http-equiv="Cache-Control" content="no-transform" />
+  <meta http-equiv="Cache-Control" content="no-siteapp" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="robots" content="index,follow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="format-detection" content="telphone=no, email=no" />
+  
+    <meta name="keywords" content="Packet Capture" />
+  
+  <meta name="description" content="第五期：Packet Capture - 进程间通信（IPMB）引言在Packet Capture项目中，Hook DLL运行在目标进程的地址空间中，而主程序（Tauri后端）运行在独立的进程中。如何在这两个进程之间高效地传输数据，是一个关键的技术挑战。本期博客将深入探讨IPMB（Inter-Process Message Bus）进程间通信技术，以及它在项目中的应用。 进程间通信概述为什么需要进">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第五期：Packet Capture - 进程间通信（IPMB）">
+<meta property="og:url" content="https://wj-stack.github.io/2025/12/31/%E7%AC%AC%E4%BA%94%E6%9C%9F%EF%BC%9APacket-Capture-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1%EF%BC%88IPMB%EF%BC%89/index.html">
+<meta property="og:site_name" content="wj-stack &#39;s Blog">
+<meta property="og:description" content="第五期：Packet Capture - 进程间通信（IPMB）引言在Packet Capture项目中，Hook DLL运行在目标进程的地址空间中，而主程序（Tauri后端）运行在独立的进程中。如何在这两个进程之间高效地传输数据，是一个关键的技术挑战。本期博客将深入探讨IPMB（Inter-Process Message Bus）进程间通信技术，以及它在项目中的应用。 进程间通信概述为什么需要进">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-12-31T02:51:44.000Z">
+<meta property="article:modified_time" content="2025-12-31T02:51:54.622Z">
+<meta property="article:author" content="wj-stack">
+<meta property="article:tag" content="Packet Capture">
+<meta name="twitter:card" content="summary">
+  
+  <!-- 样式表文件 -->
+  <link rel="stylesheet" id="kratos-css" href="/css/kr-core.min.css" media="all"></link>
+  
+    <link rel="stylesheet" id="highlight-css" href="/css/highlight/highlight.js/night-eighties.min.css" media="all"></link>
+  
+  <link rel="stylesheet" id="theme-light-css" href="/css/kr-theme/light.min.css" media="all"></link>
+  <link rel="stylesheet" id="theme-dark-css" href="/css/kr-theme/dark.min.css" media="(prefers-color-scheme: dark)"></link>
+  <script src="/js/kr-theme.min.js"></script>
+  <link rel="stylesheet" id="fontawe-css" href="/vendors/font-awesome@4.7.0/css/font-awesome.min.css" media="all"></link>
+  
+    <link rel="stylesheet" id="nprogress-css" href="/vendors/nprogress@0.2.0/nprogress.css" media="all"></link>
+  
+  
+    <link rel="stylesheet" href="/vendors/viewerjs@1.11.6/dist/viewer.min.css"></link>
+  
+  <!-- 不得不预先加载的一些JS文件 -->
+  
+    <script src="/vendors/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+  
+  <!-- 自定义站点横幅和背景 -->
+  <style>
+    
+      .kratos-cover.kratos-cover-2 {
+        background-image: url('https://dev.krt.moe/demo-assets/banner.webp');
+      }
+      html[data-theme="dark"] .kratos-cover.kratos-cover-2 {
+        background-image: url('https://dev.krt.moe/demo-assets/banner_dark.webp');
+      }
+    
+    
+      @media(min-width:768px) {
+        body.custom-background {
+          background-image: url('https://dev.krt.moe/demo-assets/bg.webp');
+        }
+        html[data-theme="dark"] body.custom-background {
+          background-image: url('https://dev.krt.moe/demo-assets/bg.webp');
+        }
+      }
+    
+    
+      .widget-kratos-about .photo-background {
+        background-image: url('/images/default.webp');
+      }
+      html[data-theme="dark"] .widget-kratos-about .photo-background {
+        background-image: url('/images/default.webp');
+      }
+    
+  </style>
+
+  <!-- 额外的追加注入项 -->
+  
+<meta name="generator" content="Hexo 8.1.1"></head>
+
+    <body class="custom-background">
+        <div id="kratos-wrapper">
+    <div id="kratos-page">
+        <div id="kratos-header">
+            <header id="kratos-desktop-topnav" class="kratos-topnav">
+                <div class="container">
+                    <div class="nav-header">
+                        <nav id="kratos-menu-wrap">
+                            <ul id="kratos-primary-menu" class="sf-menu">
+                                
+                                    <li>
+                                        
+                                            <a href="/">
+                                        
+                                            
+                                                <i class="fa fa-home"></i>
+                                            
+                                            首页
+                                        </a>
+                                        
+                                    </li>
+                                
+                                    <li>
+                                        
+                                            <a href="/archives/">
+                                        
+                                            
+                                                <i class="fa fa-file"></i>
+                                            
+                                            档案馆
+                                        </a>
+                                        
+                                    </li>
+                                
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </header>
+            <header id="kratos-mobile-topnav" class="kratos-topnav">
+                <div class="container">
+                    <div class="color-logo"><a href="/">wj-stack &#39;s Blog</a></div>
+                    <div id="kratos-nav-toggle-wrapper" class="nav-toggle">
+                        <a id="kratos-nav-toggle" class="kratos-nav-toggle">
+                            <i></i>
+                        </a>
+                    </div>
+                </div>
+            </header>
+        </div>
+        <div class="kratos-start kratos-hero-2">
+            <!-- <div class="kratos-overlay"></div> -->
+            <div class="kratos-cover kratos-cover-2 text-center">
+                <div class="desc desc2 animate-box">
+                    <a href="/">
+                        <h2>wj-stack &#39;s Blog</h2> <br />
+                        <span></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div id="kratos-blog-post">
+            <div class="container">
+                <div id="main" class="row">
+
+
+        
+
+            
+
+            <section class="kr-main-col col-md-8">
+
+        
+
+            <article itemscope itemtype="https://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://wj-stack.github.io/2025/12/31/%E7%AC%AC%E4%BA%94%E6%9C%9F%EF%BC%9APacket-Capture-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1%EF%BC%88IPMB%EF%BC%89/">
+    <div class="kratos-hentry kratos-page-inner clearfix">
+        <header class="kratos-page-header">
+            
+                <h1 class="kratos-page-title text-center" itemprop="name headline">第五期：Packet Capture - 进程间通信（IPMB）</h1>
+            
+            <ul class="kratos-page-meta text-center">
+                <li><time datetime="2025-12-31T02:51:44.000Z" itemprop="datePublished"><i class="fa fa-calendar"></i> 2025-12-31</time></li>
+                <li itemprop="author" itemscope itemtype="https://schema.org/Person">
+                    <i class="fa fa-user"></i> 作者 <span itemprop="name">wj-stack</span>
+                </li>
+                
+                    <li>
+                        <i class="fa fa-edit"></i> 
+                        
+                        
+                            ~8.70K
+                        
+                        字
+                    </li>
+                
+                
+                
+            </ul>
+        </header>
+        <div class="kratos-page-content kr-post">
+            
+            
+            
+            <hr />
+            <div itemprop="articleBody"><h1 id="第五期：Packet-Capture-进程间通信（IPMB）"><a href="#第五期：Packet-Capture-进程间通信（IPMB）" class="headerlink" title="第五期：Packet Capture - 进程间通信（IPMB）"></a>第五期：Packet Capture - 进程间通信（IPMB）</h1><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>在Packet Capture项目中，Hook DLL运行在目标进程的地址空间中，而主程序（Tauri后端）运行在独立的进程中。如何在这两个进程之间高效地传输数据，是一个关键的技术挑战。本期博客将深入探讨IPMB（Inter-Process Message Bus）进程间通信技术，以及它在项目中的应用。</p>
+<h2 id="进程间通信概述"><a href="#进程间通信概述" class="headerlink" title="进程间通信概述"></a>进程间通信概述</h2><h3 id="为什么需要进程间通信？"><a href="#为什么需要进程间通信？" class="headerlink" title="为什么需要进程间通信？"></a>为什么需要进程间通信？</h3><p>在Packet Capture项目中，数据流向如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">目标进程 (被Hook的应用程序)</span><br><span class="line">    ↓ 捕获数据</span><br><span class="line">Hook DLL (hook-dll)</span><br><span class="line">    ↓ 需要传输数据</span><br><span class="line">Tauri后端 (src-tauri)</span><br><span class="line">    ↓ Tauri IPC</span><br><span class="line">React前端 (src)</span><br></pre></td></tr></table></figure>
+
+<p>Hook DLL和Tauri后端运行在不同的进程中，需要通过进程间通信（IPC）来传输数据。</p>
+<h3 id="进程间通信的挑战"><a href="#进程间通信的挑战" class="headerlink" title="进程间通信的挑战"></a>进程间通信的挑战</h3><ol>
+<li><strong>性能要求</strong>：网络数据包可能非常频繁，需要高性能的IPC机制</li>
+<li><strong>数据量大</strong>：单个数据包可能很大，需要高效的数据传输</li>
+<li><strong>实时性</strong>：需要实时传输数据，不能有太大延迟</li>
+<li><strong>可靠性</strong>：需要保证数据传输的可靠性</li>
+</ol>
+<h2 id="IPMB简介"><a href="#IPMB简介" class="headerlink" title="IPMB简介"></a>IPMB简介</h2><h3 id="什么是IPMB？"><a href="#什么是IPMB？" class="headerlink" title="什么是IPMB？"></a>什么是IPMB？</h3><p>IPMB（Inter-Process Message Bus）是一个高性能的进程间消息总线库，专为Rust设计。它提供了：</p>
+<ol>
+<li><strong>高性能</strong>：基于共享内存，性能优秀</li>
+<li><strong>类型安全</strong>：Rust类型系统保证类型安全</li>
+<li><strong>易用性</strong>：API简洁，易于使用</li>
+<li><strong>跨平台</strong>：支持Windows、Linux、macOS</li>
+</ol>
+<h3 id="IPMB的优势"><a href="#IPMB的优势" class="headerlink" title="IPMB的优势"></a>IPMB的优势</h3><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>IPMB</th>
+<th>命名管道</th>
+<th>Socket</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>性能</strong></td>
+<td>优秀（共享内存）</td>
+<td>良好</td>
+<td>一般</td>
+</tr>
+<tr>
+<td><strong>延迟</strong></td>
+<td>低</td>
+<td>中等</td>
+<td>较高</td>
+</tr>
+<tr>
+<td><strong>类型安全</strong></td>
+<td>✅</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>易用性</strong></td>
+<td>简单</td>
+<td>中等</td>
+<td>复杂</td>
+</tr>
+</tbody></table>
+<h2 id="IPMB架构设计"><a href="#IPMB架构设计" class="headerlink" title="IPMB架构设计"></a>IPMB架构设计</h2><h3 id="消息总线模型"><a href="#消息总线模型" class="headerlink" title="消息总线模型"></a>消息总线模型</h3><p>IPMB采用消息总线模型：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────┐         ┌─────────────┐</span><br><span class="line">│  Hook DLL   │ ──────&gt; │   IPMB     │</span><br><span class="line">│  (Earth)    │         │  Message   │</span><br><span class="line">└─────────────┘         │    Bus     │</span><br><span class="line">                        └─────────────┘</span><br><span class="line">                              │</span><br><span class="line">                              │</span><br><span class="line">                        ┌─────────────┐</span><br><span class="line">                        │ Tauri后端   │</span><br><span class="line">                        │  (Moon)     │</span><br><span class="line">                        └─────────────┘</span><br></pre></td></tr></table></figure>
+
+<h3 id="通道设计"><a href="#通道设计" class="headerlink" title="通道设计"></a>通道设计</h3><p>IPMB使用通道（Channel）来组织消息：</p>
+<ol>
+<li><p><strong>命令通道</strong> (<code>com.solar.command</code>)：Tauri后端 → Hook DLL</p>
+<ul>
+<li>发送Hook控制命令</li>
+<li>发送篡改规则配置</li>
+</ul>
+</li>
+<li><p><strong>数据通道</strong> (<code>com.solar.capture</code>)：Hook DLL → Tauri后端</p>
+<ul>
+<li>传输捕获的数据包</li>
+<li>实时推送数据</li>
+</ul>
+</li>
+</ol>
+<h2 id="IPMB在项目中的应用"><a href="#IPMB在项目中的应用" class="headerlink" title="IPMB在项目中的应用"></a>IPMB在项目中的应用</h2><h3 id="初始化IPMB"><a href="#初始化IPMB" class="headerlink" title="初始化IPMB"></a>初始化IPMB</h3><p><strong>Hook DLL端</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// hook-dll/src/lib.rs</span></span><br><span class="line"><span class="keyword">use</span> ipmb::&#123;MessageBox, label, Options, Message, Selector&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> PACKET_SENDER: OnceLock&lt;Mutex&lt;<span class="type">Option</span>&lt;<span class="type">Box</span>&lt;<span class="keyword">dyn</span> <span class="title function_ invoke__">Fn</span>(PacketData) + <span class="built_in">Send</span> + <span class="built_in">Sync</span>&gt;&gt;&gt;&gt; = OnceLock::<span class="title function_ invoke__">new</span>();</span><br><span class="line"></span><br><span class="line"><span class="keyword">fn</span> <span class="title function_">init_packet_sender</span>() <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;(), <span class="type">Box</span>&lt;<span class="keyword">dyn</span> Error&gt;&gt; &#123;</span><br><span class="line">    <span class="comment">// 创建IPMB选项</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">options</span> = Options::<span class="title function_ invoke__">new</span>(<span class="string">&quot;com.solar.capture&quot;</span>, label!(<span class="string">&quot;earth&quot;</span>), <span class="string">&quot;&quot;</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 加入IPMB消息总线</span></span><br><span class="line">    <span class="keyword">let</span> (sender, _receiver) = ipmb::join::&lt;PacketMessage, PacketMessage&gt;(options, <span class="literal">None</span>)?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 创建发送函数</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">sender_fn</span>: <span class="type">Box</span>&lt;<span class="keyword">dyn</span> <span class="title function_ invoke__">Fn</span>(PacketData) + <span class="built_in">Send</span> + <span class="built_in">Sync</span>&gt; = <span class="type">Box</span>::<span class="title function_ invoke__">new</span>(<span class="keyword">move</span> |packet| &#123;</span><br><span class="line">        <span class="keyword">let</span> <span class="variable">selector</span> = Selector::<span class="title function_ invoke__">unicast</span>(<span class="string">&quot;moon&quot;</span>);</span><br><span class="line">        <span class="keyword">let</span> <span class="variable">message</span> = Message::<span class="title function_ invoke__">new</span>(selector, PacketMessage::<span class="title function_ invoke__">Packet</span>(packet));</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">let</span> <span class="variable">Err</span>(e) = sender.<span class="title function_ invoke__">send</span>(message) &#123;</span><br><span class="line">            error!(<span class="string">&quot;发送封包数据失败: &#123;&#125;&quot;</span>, e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    </span><br><span class="line">    PACKET_SENDER.<span class="title function_ invoke__">set</span>(Mutex::<span class="title function_ invoke__">new</span>(<span class="title function_ invoke__">Some</span>(sender_fn)))?;</span><br><span class="line">    </span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>Tauri后端端</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src-tauri/src/lib.rs</span></span><br><span class="line"><span class="keyword">use</span> ipmb::&#123;MessageBox, label, Options, Message, Selector&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">fn</span> <span class="title function_">init_ipmb_receiver</span>() <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;()&gt; &#123;</span><br><span class="line">    <span class="comment">// 创建IPMB选项</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">options</span> = Options::<span class="title function_ invoke__">new</span>(<span class="string">&quot;com.solar.capture&quot;</span>, label!(<span class="string">&quot;moon&quot;</span>), <span class="string">&quot;&quot;</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 加入IPMB消息总线</span></span><br><span class="line">    <span class="keyword">let</span> (_sender, receiver) = ipmb::join::&lt;PacketMessage, PacketMessage&gt;(options, <span class="literal">None</span>)?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 启动接收循环</span></span><br><span class="line">    tokio::<span class="title function_ invoke__">spawn</span>(<span class="keyword">async</span> <span class="keyword">move</span> &#123;</span><br><span class="line">        <span class="keyword">while</span> <span class="keyword">let</span> <span class="variable">Ok</span>(message) = receiver.<span class="title function_ invoke__">recv</span>().<span class="keyword">await</span> &#123;</span><br><span class="line">            <span class="keyword">match</span> message.payload &#123;</span><br><span class="line">                PacketMessage::<span class="title function_ invoke__">Packet</span>(packet) =&gt; &#123;</span><br><span class="line">                    <span class="comment">// 处理数据包</span></span><br><span class="line">                    <span class="title function_ invoke__">handle_packet</span>(packet).<span class="keyword">await</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    </span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="发送数据包"><a href="#发送数据包" class="headerlink" title="发送数据包"></a>发送数据包</h3><p><strong>Hook DLL端发送数据</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// hook-dll/src/lib.rs</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">send_packet_data</span>(packet: PacketData) &#123;</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">let</span> <span class="variable">Some</span>(sender_guard) = PACKET_SENDER.<span class="title function_ invoke__">get</span>() &#123;</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">let</span> <span class="variable">Ok</span>(sender_opt) = sender_guard.<span class="title function_ invoke__">lock</span>() &#123;</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">let</span> <span class="variable">Some</span>(sender_fn) = sender_opt.<span class="title function_ invoke__">as_ref</span>() &#123;</span><br><span class="line">                <span class="title function_ invoke__">sender_fn</span>(packet);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="接收数据包"><a href="#接收数据包" class="headerlink" title="接收数据包"></a>接收数据包</h3><p><strong>Tauri后端接收数据</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src-tauri/src/lib.rs</span></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">fn</span> <span class="title function_">handle_packet</span>(packet: PacketData) &#123;</span><br><span class="line">    <span class="comment">// 解析数据包</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">parsed_packet</span> = <span class="title function_ invoke__">parse_packet</span>(&amp;packet)?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 发送到前端</span></span><br><span class="line">    app.<span class="title function_ invoke__">emit_all</span>(<span class="string">&quot;packet-captured&quot;</span>, parsed_packet)?;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="消息类型定义"><a href="#消息类型定义" class="headerlink" title="消息类型定义"></a>消息类型定义</h2><h3 id="PacketMessage枚举"><a href="#PacketMessage枚举" class="headerlink" title="PacketMessage枚举"></a>PacketMessage枚举</h3><figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 共享的消息类型</span></span><br><span class="line"><span class="meta">#[derive(Serialize, Deserialize, Clone, TypeUuid)]</span></span><br><span class="line"><span class="meta">#[uuid = <span class="string">&quot;12345678-1234-1234-1234-123456789abc&quot;</span>]</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">enum</span> <span class="title class_">PacketMessage</span> &#123;</span><br><span class="line">    <span class="comment">/// 数据包消息</span></span><br><span class="line">    <span class="title function_ invoke__">Packet</span>(PacketData),</span><br><span class="line">    </span><br><span class="line">    <span class="comment">/// 命令消息</span></span><br><span class="line">    <span class="title function_ invoke__">Command</span>(CommandMessage),</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">#[derive(Serialize, Deserialize, Clone)]</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">struct</span> <span class="title class_">PacketData</span> &#123;</span><br><span class="line">    <span class="keyword">pub</span> id: <span class="type">u64</span>,</span><br><span class="line">    <span class="keyword">pub</span> timestamp: <span class="type">i64</span>,</span><br><span class="line">    <span class="keyword">pub</span> hook_type: HookType,</span><br><span class="line">    <span class="keyword">pub</span> socket: SOCKET,</span><br><span class="line">    <span class="keyword">pub</span> src_addr: <span class="type">Option</span>&lt;<span class="type">String</span>&gt;,</span><br><span class="line">    <span class="keyword">pub</span> dst_addr: <span class="type">Option</span>&lt;<span class="type">String</span>&gt;,</span><br><span class="line">    <span class="keyword">pub</span> protocol: <span class="type">Option</span>&lt;<span class="type">String</span>&gt;,</span><br><span class="line">    <span class="keyword">pub</span> data: <span class="type">Vec</span>&lt;<span class="type">u8</span>&gt;,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="CommandMessage枚举"><a href="#CommandMessage枚举" class="headerlink" title="CommandMessage枚举"></a>CommandMessage枚举</h3><figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#[derive(Serialize, Deserialize, Clone)]</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">enum</span> <span class="title class_">CommandMessage</span> &#123;</span><br><span class="line">    <span class="comment">/// 启用Hook</span></span><br><span class="line">    <span class="title function_ invoke__">EnableHook</span>(HookType),</span><br><span class="line">    </span><br><span class="line">    <span class="comment">/// 禁用Hook</span></span><br><span class="line">    <span class="title function_ invoke__">DisableHook</span>(HookType),</span><br><span class="line">    </span><br><span class="line">    <span class="comment">/// 更新篡改规则</span></span><br><span class="line">    <span class="title function_ invoke__">UpdateTamperRules</span>(<span class="type">Vec</span>&lt;TamperRule&gt;),</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="命令通道实现"><a href="#命令通道实现" class="headerlink" title="命令通道实现"></a>命令通道实现</h2><h3 id="Tauri后端发送命令"><a href="#Tauri后端发送命令" class="headerlink" title="Tauri后端发送命令"></a>Tauri后端发送命令</h3><figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src-tauri/src/lib.rs</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">async</span> <span class="keyword">fn</span> <span class="title function_">send_command_to_dll</span>(command: CommandMessage) <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;()&gt; &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">options</span> = Options::<span class="title function_ invoke__">new</span>(<span class="string">&quot;com.solar.command&quot;</span>, label!(<span class="string">&quot;moon&quot;</span>), <span class="string">&quot;&quot;</span>);</span><br><span class="line">    <span class="keyword">let</span> (sender, _receiver) = ipmb::join::&lt;CommandMessage, CommandMessage&gt;(options, <span class="literal">None</span>)?;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">let</span> <span class="variable">selector</span> = Selector::<span class="title function_ invoke__">unicast</span>(<span class="string">&quot;earth&quot;</span>);</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">message</span> = Message::<span class="title function_ invoke__">new</span>(selector, command);</span><br><span class="line">    </span><br><span class="line">    sender.<span class="title function_ invoke__">send</span>(message)?;</span><br><span class="line">    </span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Hook-DLL接收命令"><a href="#Hook-DLL接收命令" class="headerlink" title="Hook DLL接收命令"></a>Hook DLL接收命令</h3><figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// hook-dll/src/lib.rs</span></span><br><span class="line"><span class="keyword">fn</span> <span class="title function_">init_command_receiver</span>() <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;()&gt; &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">options</span> = Options::<span class="title function_ invoke__">new</span>(<span class="string">&quot;com.solar.command&quot;</span>, label!(<span class="string">&quot;earth&quot;</span>), <span class="string">&quot;&quot;</span>);</span><br><span class="line">    <span class="keyword">let</span> (_sender, receiver) = ipmb::join::&lt;CommandMessage, CommandMessage&gt;(options, <span class="literal">None</span>)?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 启动接收循环</span></span><br><span class="line">    std::thread::<span class="title function_ invoke__">spawn</span>(<span class="keyword">move</span> || &#123;</span><br><span class="line">        <span class="keyword">loop</span> &#123;</span><br><span class="line">            <span class="keyword">match</span> receiver.<span class="title function_ invoke__">recv</span>() &#123;</span><br><span class="line">                <span class="title function_ invoke__">Ok</span>(message) =&gt; &#123;</span><br><span class="line">                    <span class="keyword">match</span> message.payload &#123;</span><br><span class="line">                        CommandMessage::<span class="title function_ invoke__">EnableHook</span>(hook_type) =&gt; &#123;</span><br><span class="line">                            <span class="title function_ invoke__">enable_hook</span>(hook_type)?;</span><br><span class="line">                        &#125;</span><br><span class="line">                        CommandMessage::<span class="title function_ invoke__">DisableHook</span>(hook_type) =&gt; &#123;</span><br><span class="line">                            <span class="title function_ invoke__">disable_hook</span>(hook_type)?;</span><br><span class="line">                        &#125;</span><br><span class="line">                        CommandMessage::<span class="title function_ invoke__">UpdateTamperRules</span>(rules) =&gt; &#123;</span><br><span class="line">                            <span class="title function_ invoke__">update_tamper_rules</span>(rules)?;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="title function_ invoke__">Err</span>(e) =&gt; &#123;</span><br><span class="line">                    error!(<span class="string">&quot;接收命令失败: &#123;&#125;&quot;</span>, e);</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    </span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="性能优化"><a href="#性能优化" class="headerlink" title="性能优化"></a>性能优化</h2><h3 id="批量传输"><a href="#批量传输" class="headerlink" title="批量传输"></a>批量传输</h3><p>对于高频数据包，可以使用批量传输：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 批量发送数据包</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">send_packets_batch</span>(packets: <span class="type">Vec</span>&lt;PacketData&gt;) &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">batch_message</span> = PacketMessage::<span class="title function_ invoke__">Batch</span>(packets);</span><br><span class="line">    <span class="title function_ invoke__">send_message</span>(batch_message);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="数据压缩"><a href="#数据压缩" class="headerlink" title="数据压缩"></a>数据压缩</h3><p>对于大数据包，可以使用压缩：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> flate2::Compression;</span><br><span class="line"></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">compress_packet</span>(packet: &amp;PacketData) <span class="punctuation">-&gt;</span> <span class="type">Vec</span>&lt;<span class="type">u8</span>&gt; &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">serialized</span> = serde_json::<span class="title function_ invoke__">to_vec</span>(packet).<span class="title function_ invoke__">unwrap</span>();</span><br><span class="line">    <span class="keyword">let</span> <span class="keyword">mut </span><span class="variable">encoder</span> = flate2::write::GzEncoder::<span class="title function_ invoke__">new</span>(<span class="type">Vec</span>::<span class="title function_ invoke__">new</span>(), Compression::<span class="title function_ invoke__">default</span>());</span><br><span class="line">    encoder.<span class="title function_ invoke__">write_all</span>(&amp;serialized).<span class="title function_ invoke__">unwrap</span>();</span><br><span class="line">    encoder.<span class="title function_ invoke__">finish</span>().<span class="title function_ invoke__">unwrap</span>()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="异步处理"><a href="#异步处理" class="headerlink" title="异步处理"></a>异步处理</h3><p>使用异步处理避免阻塞：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Tauri后端异步接收</span></span><br><span class="line">tokio::<span class="title function_ invoke__">spawn</span>(<span class="keyword">async</span> <span class="keyword">move</span> &#123;</span><br><span class="line">    <span class="keyword">while</span> <span class="keyword">let</span> <span class="variable">Ok</span>(message) = receiver.<span class="title function_ invoke__">recv</span>().<span class="keyword">await</span> &#123;</span><br><span class="line">        <span class="title function_ invoke__">handle_packet</span>(message).<span class="keyword">await</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<h2 id="错误处理"><a href="#错误处理" class="headerlink" title="错误处理"></a>错误处理</h2><h3 id="连接失败"><a href="#连接失败" class="headerlink" title="连接失败"></a>连接失败</h3><figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">fn</span> <span class="title function_">init_ipmb_with_retry</span>() <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;()&gt; &#123;</span><br><span class="line">    <span class="keyword">for</span> <span class="variable">i</span> <span class="keyword">in</span> <span class="number">0</span>..<span class="number">3</span> &#123;</span><br><span class="line">        <span class="keyword">match</span> <span class="title function_ invoke__">init_ipmb</span>() &#123;</span><br><span class="line">            <span class="title function_ invoke__">Ok</span>(()) =&gt; <span class="keyword">return</span> <span class="title function_ invoke__">Ok</span>(()),</span><br><span class="line">            <span class="title function_ invoke__">Err</span>(e) =&gt; &#123;</span><br><span class="line">                <span class="keyword">if</span> i == <span class="number">2</span> &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="title function_ invoke__">Err</span>(e);</span><br><span class="line">                &#125;</span><br><span class="line">                std::thread::<span class="title function_ invoke__">sleep</span>(Duration::<span class="title function_ invoke__">from_secs</span>(<span class="number">1</span>));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="消息丢失"><a href="#消息丢失" class="headerlink" title="消息丢失"></a>消息丢失</h3><p>IPMB本身不保证消息的可靠性，如果需要可靠性，可以在应用层实现：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 添加消息ID和确认机制</span></span><br><span class="line"><span class="meta">#[derive(Serialize, Deserialize)]</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">struct</span> <span class="title class_">ReliableMessage</span> &#123;</span><br><span class="line">    <span class="keyword">pub</span> id: <span class="type">u64</span>,</span><br><span class="line">    <span class="keyword">pub</span> payload: PacketMessage,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 发送后等待确认</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">async</span> <span class="keyword">fn</span> <span class="title function_">send_reliable</span>(message: ReliableMessage) <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;()&gt; &#123;</span><br><span class="line">    sender.<span class="title function_ invoke__">send</span>(message.<span class="title function_ invoke__">clone</span>())?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 等待确认</span></span><br><span class="line">    <span class="title function_ invoke__">wait_for_ack</span>(message.id).<span class="keyword">await</span>?;</span><br><span class="line">    </span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="调试技巧"><a href="#调试技巧" class="headerlink" title="调试技巧"></a>调试技巧</h2><h3 id="日志记录"><a href="#日志记录" class="headerlink" title="日志记录"></a>日志记录</h3><p>记录IPMB消息的发送和接收：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">debug!(<span class="string">&quot;发送消息: &#123;:?&#125;&quot;</span>, message);</span><br><span class="line">debug!(<span class="string">&quot;接收消息: &#123;:?&#125;&quot;</span>, message);</span><br></pre></td></tr></table></figure>
+
+<h3 id="消息统计"><a href="#消息统计" class="headerlink" title="消息统计"></a>消息统计</h3><p>统计消息的发送和接收数量：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> SENT_COUNT: AtomicU64 = AtomicU64::<span class="title function_ invoke__">new</span>(<span class="number">0</span>);</span><br><span class="line"><span class="keyword">static</span> RECV_COUNT: AtomicU64 = AtomicU64::<span class="title function_ invoke__">new</span>(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">send_message</span>(message: PacketMessage) &#123;</span><br><span class="line">    SENT_COUNT.<span class="title function_ invoke__">fetch_add</span>(<span class="number">1</span>, Ordering::Relaxed);</span><br><span class="line">    <span class="comment">// 发送消息</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">recv_message</span>() <span class="punctuation">-&gt;</span> PacketMessage &#123;</span><br><span class="line">    RECV_COUNT.<span class="title function_ invoke__">fetch_add</span>(<span class="number">1</span>, Ordering::Relaxed);</span><br><span class="line">    <span class="comment">// 接收消息</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>IPMB是Packet Capture项目中实现进程间通信的关键技术。通过IPMB，Hook DLL和Tauri后端可以高效地传输数据，实现实时网络抓包功能。</p>
+<p>在下一期博客中，我们将深入探讨协议解析与数据展示，包括如何解析HTTP&#x2F;HTTPS等协议，以及如何在前端展示捕获的数据。敬请期待！</p>
+<hr>
+<p><strong>相关链接</strong>：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://crates.io/crates/ipmb">IPMB文档</a></li>
+<li><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Inter-process_communication">进程间通信技术</a></li>
+<li><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Shared_memory">共享内存</a></li>
+</ul>
+<p><strong>作者</strong>：wj-stack<br><strong>日期</strong>：2025年12月31日</p>
+</div>
+        </div>
+        
+            <div class="kratos-copyright text-center clearfix">
+                <span itemprop="copyrightNotice">本作品采用 <a rel="license nofollow" target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/">知识共享署名-相同方式共享 4.0 国际许可协议</a> 进行许可</span>
+            </div>
+        
+        <footer class="kratos-entry-footer clearfix">
+            
+            
+            
+                <div class="post-actions text-center clearfix" id="post-actions">
+                
+                    <a class="donate" href="javascript:;" onclick="krOpenDonateModal()"><i class="fa fa-bitcoin"></i> 打赏</a>
+                
+                
+                    <a class="share" href="javascript:;" onclick="krOpenShareModal()"><i class="fa fa-share-alt"></i> 分享</a>
+                
+                </div>
+            
+            <div class="footer-tag clearfix">
+                <div class="pull-left">
+                <i class="fa fa-tags"></i>
+                    <a class="tag-none-link" href="/tags/Packet-Capture/" rel="tag">Packet Capture</a>
+                </div>
+                <div class="pull-date">
+                    <time datetime="2025-12-31T02:51:54.622Z" itemprop="dateModified">最后编辑：2025-12-31</time>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+        <nav class="navigation post-navigation clearfix" role="navigation">
+            
+            <div class="nav-previous clearfix">
+                <a title=" 第四期：Packet Capture - API Hook技术详解" href="/2025/12/31/第四期：Packet-Capture-API-Hook技术详解/"><i class="fa fa-angle-left"></i> 上一篇</a>
+            </div>
+            
+            
+        </nav>
+    
+    
+        <div class="comment-post">
+            
+        </div>
+    
+</article>
+
+        
+
+            </section>
+
+            
+                
+
+<section id="kratos-widget-area" class="col-md-4 hidden-xs hidden-sm">
+    <!-- 文章和页面根据splitter来分割，没有的话就从头开始设置为sticky -->
+    
+    
+                <aside id="krw-about" class="widget widget-kratos-about clearfix">
+    <div class="photo-background"></div>
+    <div class="photo-wrapper clearfix">
+        <div class="photo-wrapper-tip text-center">
+            <img class="about-photo" src="/images/user.svg" alt="wj-stack" loading="lazy" decoding="auto" />
+        </div>
+    </div>
+    <div class="textwidget">
+        <p class="text-center"></p>
+    </div>
+    <div class="site-meta">
+        <a class="meta-item" href="/archives/">
+            <span class="title">
+                文章
+            </span>
+            <span class="count">
+                18
+            </span>
+        </a>
+        <a class="meta-item" href="/categories/">
+            <span class="title">
+                分类
+            </span>
+            <span class="count">
+                0
+            </span>
+        </a>
+        <a class="meta-item" href="/tags/">
+            <span class="title">
+                标签
+            </span>
+            <span class="count">
+                2
+            </span>
+        </a>
+    </div>
+</aside>
+            
+                    <div class="sticky-area">
+                
+                
+
+            
+                
+  <aside id="krw-tags" class="widget widget-kratos-tags clearfix">
+    <h4 class="widget-title"><i class="fa fa-tags"></i>标签聚合</h4>
+      <div class="tag-clouds">
+        <a href="/tags/Packet-Capture/" style="font-size: 0.6em;">Packet Capture</a> <a href="/tags/Src/" style="font-size: 0.8em;">Src</a>
+      </div>
+  </aside>
+
+            
+                
+  <aside id="krw-posts" class="widget widget-kratos-posts">
+  <h4 class="widget-title"><i class="fa fa-file"></i>最新文章</h4>
+  <div class="tab-content">
+      <ul class="list-group">
+        
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%BA%94%E6%9C%9F%EF%BC%9APacket-Capture-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1%EF%BC%88IPMB%EF%BC%89/"><i class="fa fa-book"></i> 第五期：Packet Capture - 进程间通信（IPMB）</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E5%9B%9B%E6%9C%9F%EF%BC%9APacket-Capture-API-Hook%E6%8A%80%E6%9C%AF%E8%AF%A6%E8%A7%A3/"><i class="fa fa-book"></i> 第四期：Packet Capture - API Hook技术详解</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%B8%89%E6%9C%9F%EF%BC%9APacket-Capture-DLL%E6%B3%A8%E5%85%A5%E6%8A%80%E6%9C%AF%E6%B7%B1%E5%85%A5/"><i class="fa fa-book"></i> 第三期：Packet Capture - DLL注入技术深入</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%BA%8C%E6%9C%9F%EF%BC%9APacket-Capture-%E6%8A%80%E6%9C%AF%E6%9E%B6%E6%9E%84%E8%AF%A6%E8%A7%A3/"><i class="fa fa-book"></i> 第二期：Packet Capture - 技术架构详解</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%B8%80%E6%9C%9F%EF%BC%9APacket-Capture-%E9%A1%B9%E7%9B%AE%E4%BB%8B%E7%BB%8D%E4%B8%8E%E8%83%8C%E6%99%AF/"><i class="fa fa-book"></i> 第一期：Packet Capture - 项目介绍与背景</a>
+            
+          
+        
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+      </ul>
+  </div>
+  </aside>
+
+            
+    </div>
+</section>
+            
+
+        
+
+                </div>
+    </div>
+</div>
+
+<footer>
+    <div id="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 col-md-offset-3 footer-list text-center">
+                    <ul class="kratos-social-icons">
+                        
+                            <li>
+                                <a href="https://github.com/wj-stack" target="_blank" rel="nofollow">
+                                    <i class="fa fa-github"></i>
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="/atom.xml" target="_blank" rel="nofollow">
+                                    <i class="fa fa-rss"></i>
+                                </a>
+                            </li>
+                        
+                    </ul>
+                    <ul class="kratos-copyright">
+                        <div>
+                            <li>&copy; 2025 wj-stack 's Blog 版权所有.</li>
+                            <li>本站已在风雨中飘摇<span id="kr-since">Loading...</span></li>
+                        </div>
+                        <div>
+                            <li>自豪地使用 <a href="https://github.com/Candinya/Kratos-Rebirth" target="_blank">Kratos:Rebirth</a> 主题</li>
+                            <li>站点由 <a href="https://github.com/Candinya/Kratos-Rebirth/graphs/contributors" target="_blank">wj-stack</a> 用 <i class="fa fa-heart" style="color:#d43f57"></i> 搭建</li>
+                        </div>
+                        <!-- 额外的追加注入项 -->
+                        
+                            <div>
+                                
+                                    <li>由 <a href="https://hexo.io" target="_blank" rel="nofollow">Hexo</a> 强力驱动</li>
+                                
+                                    <li>在 <a href="https://github.io" target="_blank">Github Pages</a> 暖心托管</li>
+                                
+                            </div>
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="kr-tool text-center">
+            <div class="tool">
+                
+                    <div class="box search-box">
+                        <a href="/search">
+                            <span class="fa fa-search"></span>
+                        </a>
+                    </div>
+                
+                <div class="box theme-box" id="theme-toggle">
+                    <span class="fa fa-adjust"></span>
+                </div>
+            </div>
+            <div id="gotop-box" class="box gotop-box">
+                <span class="fa fa-chevron-up"></span>
+            </div>
+        </div>
+    </div>
+</footer>
+</div>
+</div>
+
+
+    <div id="kr-donate-modal" class="kr-modal">
+    <div class="kr-modal-bg" onclick="krCloseDonateModal()"></div>
+    <div class="kr-modal-content">
+        <div class="kr-modal-header">
+            <div class="kr-modal-icon">
+                <i class="fa fa-bitcoin"></i>
+            </div>
+            <div class="kr-modal-title">赞助喵</div>
+            <button class="kr-modal-close" onclick="krCloseDonateModal()">
+                <i class="fa fa-times-circle"></i>
+            </button>
+        </div>
+        <div class="kr-modal-body">
+            <div class="kr-donate-message">非常感谢您的喜欢！ <i class="fa fa-heart" style="color:#d43f57"></i></div>
+            <div class="kr-donate-qr" id="kr-donate-qr">
+                
+                    <img class="kr-donate-placeholder" src="https://dev.krt.moe/demo-assets/donate.webp" alt="赞助喵" />
+                
+            </div>
+            <div class="kr-donate-platforms">
+                
+                    
+                        <button class="kr-donate-platform-button" style="color: skyblue;" title="模拟支付" onclick="krDonateModalShowPlatformQR('example_payment', 'skyblue')">
+                            <i class="fa fa-credit-card"></i>
+                        </button>
+                    
+                
+            </div>
+        </div>
+    </div>
+</div>
+<script defer src="/js/kr-modal/donate.min.js"></script>
+
+
+
+
+    <div id="kr-share-modal" class="kr-modal">
+    <div class="kr-modal-bg" onclick="krCloseShareModal()"></div>
+    <div class="kr-modal-content">
+        <div class="kr-modal-header">
+            <div class="kr-modal-icon">
+                <i class="fa fa-share-alt"></i>
+            </div>
+            <div class="kr-modal-title">分享这一刻</div>
+            <button class="kr-modal-close" onclick="krCloseShareModal()">
+                <i class="fa fa-times-circle"></i>
+            </button>
+        </div>
+        <div class="kr-modal-body">
+            <div class="kr-share-message">让朋友们也来瞅瞅！</div>
+            <div class="kr-share-qr" id="kr-share-qr"></div>
+            <div class="kr-share-platforms">
+                
+                    <button class="kr-share-platform-button" style="color: #62b6e7;" title="喵窝" onclick="krShareModalOpenPlatform('https://nya.one/share?text=%3E%20$TITLE%0A%3E%0A%3E%20$SUMMARY%0A----%20$SITE%0A%0A$URL')">
+                        <svg fill="currentColor" width="18" height="18" viewBox="0 0 329 388"><path d="M0,36.226c0,-19.993 16.233,-36.226 36.226,-36.226c13.788,0 25.787,7.719 31.908,19.068l188.366,229.845l0,-111.259c-6.356,5.508 -14.645,8.843 -23.707,8.843c-19.994,0 -36.226,-16.232 -36.226,-36.226c-0,-8.551 2.968,-16.413 7.93,-22.613l-0.015,-0.013l56.614,-69.08c6.2,-11.073 18.047,-18.565 31.63,-18.565c19.994,0 36.227,16.233 36.227,36.226l-0,314.644c-0,19.994 -16.233,36.226 -36.227,36.226c-13.166,0 -24.701,-7.039 -31.044,-17.555l-189.229,-230.899l-0,212.228c-0,19.994 -16.233,36.226 -36.227,36.226c-19.993,0 -36.226,-16.232 -36.226,-36.226l0,-314.644Z" /></svg>
+                    </button>
+                
+            </div>
+        </div>
+    </div>
+</div>
+<script defer src="/js/kr-modal/share.min.js"></script>
+
+
+
+<!-- 额外的追加注入项 -->
+
+
+        <script>
+    if (!window.kr) {
+        window.kr = {};
+    }
+    window.kr.notMobile = (!(navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i)));
+    window.kr.siteRoot = "/";
+</script>
+
+
+  <script defer src="/vendors/nprogress@0.2.0/nprogress.js"></script>
+
+
+
+  <script defer src="/vendors/viewerjs@1.11.6/dist/viewer.min.js"></script>
+
+
+<script defer src="/js/kr-core.min.js"></script>
+
+
+  <script defer src="/js/kr-pjax.min.js"></script>
+
+
+<!-- 额外的追加注入项 -->
+
+
+    </body>
+</html>

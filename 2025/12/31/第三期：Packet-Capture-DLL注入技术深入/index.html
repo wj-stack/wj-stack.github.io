@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+  <!-- 元数据 -->
+  <meta charset="utf-8">
+  
+    <link rel="icon" href="/assets/favicon.png">
+  
+  
+  <title>第三期：Packet Capture - DLL注入技术深入 | wj-stack &#39;s Blog</title>
+  <link rel="canonical" href="https://wj-stack.github.io/2025/12/31/%E7%AC%AC%E4%B8%89%E6%9C%9F%EF%BC%9APacket-Capture-DLL%E6%B3%A8%E5%85%A5%E6%8A%80%E6%9C%AF%E6%B7%B1%E5%85%A5/">
+  <meta name="author" content="wj-stack" />
+  <meta http-equiv="Cache-Control" content="no-transform" />
+  <meta http-equiv="Cache-Control" content="no-siteapp" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="robots" content="index,follow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="format-detection" content="telphone=no, email=no" />
+  
+    <meta name="keywords" content="Packet Capture" />
+  
+  <meta name="description" content="第三期：Packet Capture - DLL注入技术深入引言DLL注入是Packet Capture项目的核心技术之一。通过DLL注入，我们可以将Hook代码注入到目标进程中，从而拦截和监控其网络通信。本期博客将深入探讨DLL注入的原理、实现方法，以及在项目中的实际应用。 DLL注入概述什么是DLL注入？DLL注入（DLL Injection）是一种技术，允许我们将一个动态链接库（DLL）加载">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第三期：Packet Capture - DLL注入技术深入">
+<meta property="og:url" content="https://wj-stack.github.io/2025/12/31/%E7%AC%AC%E4%B8%89%E6%9C%9F%EF%BC%9APacket-Capture-DLL%E6%B3%A8%E5%85%A5%E6%8A%80%E6%9C%AF%E6%B7%B1%E5%85%A5/index.html">
+<meta property="og:site_name" content="wj-stack &#39;s Blog">
+<meta property="og:description" content="第三期：Packet Capture - DLL注入技术深入引言DLL注入是Packet Capture项目的核心技术之一。通过DLL注入，我们可以将Hook代码注入到目标进程中，从而拦截和监控其网络通信。本期博客将深入探讨DLL注入的原理、实现方法，以及在项目中的实际应用。 DLL注入概述什么是DLL注入？DLL注入（DLL Injection）是一种技术，允许我们将一个动态链接库（DLL）加载">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-12-31T02:50:20.000Z">
+<meta property="article:modified_time" content="2025-12-31T02:50:41.363Z">
+<meta property="article:author" content="wj-stack">
+<meta property="article:tag" content="Packet Capture">
+<meta name="twitter:card" content="summary">
+  
+  <!-- 样式表文件 -->
+  <link rel="stylesheet" id="kratos-css" href="/css/kr-core.min.css" media="all"></link>
+  
+    <link rel="stylesheet" id="highlight-css" href="/css/highlight/highlight.js/night-eighties.min.css" media="all"></link>
+  
+  <link rel="stylesheet" id="theme-light-css" href="/css/kr-theme/light.min.css" media="all"></link>
+  <link rel="stylesheet" id="theme-dark-css" href="/css/kr-theme/dark.min.css" media="(prefers-color-scheme: dark)"></link>
+  <script src="/js/kr-theme.min.js"></script>
+  <link rel="stylesheet" id="fontawe-css" href="/vendors/font-awesome@4.7.0/css/font-awesome.min.css" media="all"></link>
+  
+    <link rel="stylesheet" id="nprogress-css" href="/vendors/nprogress@0.2.0/nprogress.css" media="all"></link>
+  
+  
+    <link rel="stylesheet" href="/vendors/viewerjs@1.11.6/dist/viewer.min.css"></link>
+  
+  <!-- 不得不预先加载的一些JS文件 -->
+  
+    <script src="/vendors/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+  
+  <!-- 自定义站点横幅和背景 -->
+  <style>
+    
+      .kratos-cover.kratos-cover-2 {
+        background-image: url('https://dev.krt.moe/demo-assets/banner.webp');
+      }
+      html[data-theme="dark"] .kratos-cover.kratos-cover-2 {
+        background-image: url('https://dev.krt.moe/demo-assets/banner_dark.webp');
+      }
+    
+    
+      @media(min-width:768px) {
+        body.custom-background {
+          background-image: url('https://dev.krt.moe/demo-assets/bg.webp');
+        }
+        html[data-theme="dark"] body.custom-background {
+          background-image: url('https://dev.krt.moe/demo-assets/bg.webp');
+        }
+      }
+    
+    
+      .widget-kratos-about .photo-background {
+        background-image: url('/images/default.webp');
+      }
+      html[data-theme="dark"] .widget-kratos-about .photo-background {
+        background-image: url('/images/default.webp');
+      }
+    
+  </style>
+
+  <!-- 额外的追加注入项 -->
+  
+<meta name="generator" content="Hexo 8.1.1"></head>
+
+    <body class="custom-background">
+        <div id="kratos-wrapper">
+    <div id="kratos-page">
+        <div id="kratos-header">
+            <header id="kratos-desktop-topnav" class="kratos-topnav">
+                <div class="container">
+                    <div class="nav-header">
+                        <nav id="kratos-menu-wrap">
+                            <ul id="kratos-primary-menu" class="sf-menu">
+                                
+                                    <li>
+                                        
+                                            <a href="/">
+                                        
+                                            
+                                                <i class="fa fa-home"></i>
+                                            
+                                            首页
+                                        </a>
+                                        
+                                    </li>
+                                
+                                    <li>
+                                        
+                                            <a href="/archives/">
+                                        
+                                            
+                                                <i class="fa fa-file"></i>
+                                            
+                                            档案馆
+                                        </a>
+                                        
+                                    </li>
+                                
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </header>
+            <header id="kratos-mobile-topnav" class="kratos-topnav">
+                <div class="container">
+                    <div class="color-logo"><a href="/">wj-stack &#39;s Blog</a></div>
+                    <div id="kratos-nav-toggle-wrapper" class="nav-toggle">
+                        <a id="kratos-nav-toggle" class="kratos-nav-toggle">
+                            <i></i>
+                        </a>
+                    </div>
+                </div>
+            </header>
+        </div>
+        <div class="kratos-start kratos-hero-2">
+            <!-- <div class="kratos-overlay"></div> -->
+            <div class="kratos-cover kratos-cover-2 text-center">
+                <div class="desc desc2 animate-box">
+                    <a href="/">
+                        <h2>wj-stack &#39;s Blog</h2> <br />
+                        <span></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div id="kratos-blog-post">
+            <div class="container">
+                <div id="main" class="row">
+
+
+        
+
+            
+
+            <section class="kr-main-col col-md-8">
+
+        
+
+            <article itemscope itemtype="https://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://wj-stack.github.io/2025/12/31/%E7%AC%AC%E4%B8%89%E6%9C%9F%EF%BC%9APacket-Capture-DLL%E6%B3%A8%E5%85%A5%E6%8A%80%E6%9C%AF%E6%B7%B1%E5%85%A5/">
+    <div class="kratos-hentry kratos-page-inner clearfix">
+        <header class="kratos-page-header">
+            
+                <h1 class="kratos-page-title text-center" itemprop="name headline">第三期：Packet Capture - DLL注入技术深入</h1>
+            
+            <ul class="kratos-page-meta text-center">
+                <li><time datetime="2025-12-31T02:50:20.000Z" itemprop="datePublished"><i class="fa fa-calendar"></i> 2025-12-31</time></li>
+                <li itemprop="author" itemscope itemtype="https://schema.org/Person">
+                    <i class="fa fa-user"></i> 作者 <span itemprop="name">wj-stack</span>
+                </li>
+                
+                    <li>
+                        <i class="fa fa-edit"></i> 
+                        
+                        
+                            ~8.30K
+                        
+                        字
+                    </li>
+                
+                
+                
+            </ul>
+        </header>
+        <div class="kratos-page-content kr-post">
+            
+            
+            
+            <hr />
+            <div itemprop="articleBody"><h1 id="第三期：Packet-Capture-DLL注入技术深入"><a href="#第三期：Packet-Capture-DLL注入技术深入" class="headerlink" title="第三期：Packet Capture - DLL注入技术深入"></a>第三期：Packet Capture - DLL注入技术深入</h1><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>DLL注入是Packet Capture项目的核心技术之一。通过DLL注入，我们可以将Hook代码注入到目标进程中，从而拦截和监控其网络通信。本期博客将深入探讨DLL注入的原理、实现方法，以及在项目中的实际应用。</p>
+<h2 id="DLL注入概述"><a href="#DLL注入概述" class="headerlink" title="DLL注入概述"></a>DLL注入概述</h2><h3 id="什么是DLL注入？"><a href="#什么是DLL注入？" class="headerlink" title="什么是DLL注入？"></a>什么是DLL注入？</h3><p>DLL注入（DLL Injection）是一种技术，允许我们将一个动态链接库（DLL）加载到另一个进程的地址空间中。一旦DLL被注入，它就可以访问目标进程的内存空间，执行代码，并Hook目标进程中的函数。</p>
+<h3 id="为什么需要DLL注入？"><a href="#为什么需要DLL注入？" class="headerlink" title="为什么需要DLL注入？"></a>为什么需要DLL注入？</h3><p>在Packet Capture项目中，我们需要：</p>
+<ol>
+<li><strong>拦截网络函数调用</strong>：Hook <code>send</code>、<code>recv</code>、<code>WSASend</code>等网络API</li>
+<li><strong>访问进程内存</strong>：读取网络数据包的内容</li>
+<li><strong>实时监控</strong>：在目标进程内部实时捕获网络通信</li>
+</ol>
+<p>如果不使用DLL注入，我们只能从外部监控网络流量，无法精确到进程级别，也无法在加密前&#x2F;解密后捕获HTTPS数据。</p>
+<h2 id="DLL注入原理"><a href="#DLL注入原理" class="headerlink" title="DLL注入原理"></a>DLL注入原理</h2><h3 id="Windows进程内存空间"><a href="#Windows进程内存空间" class="headerlink" title="Windows进程内存空间"></a>Windows进程内存空间</h3><p>每个Windows进程都有自己独立的虚拟地址空间：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">进程A的地址空间         进程B的地址空间</span><br><span class="line">┌─────────────┐        ┌─────────────┐</span><br><span class="line">│  0x00000000 │        │  0x00000000 │</span><br><span class="line">│     ...     │        │     ...     │</span><br><span class="line">│  0x7FFFFFFF │        │  0x7FFFFFFF │</span><br><span class="line">└─────────────┘        └─────────────┘</span><br></pre></td></tr></table></figure>
+
+<p>默认情况下，进程之间无法直接访问对方的内存空间。DLL注入就是打破这个隔离，将我们的代码注入到目标进程中。</p>
+<h3 id="DLL注入的基本流程"><a href="#DLL注入的基本流程" class="headerlink" title="DLL注入的基本流程"></a>DLL注入的基本流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">1. 打开目标进程</span><br><span class="line">   └─&gt; OpenProcess()</span><br><span class="line">   </span><br><span class="line">2. 在目标进程中分配内存</span><br><span class="line">   └─&gt; VirtualAllocEx()</span><br><span class="line">   </span><br><span class="line">3. 将DLL路径写入目标进程内存</span><br><span class="line">   └─&gt; WriteProcessMemory()</span><br><span class="line">   </span><br><span class="line">4. 在目标进程中创建远程线程</span><br><span class="line">   └─&gt; CreateRemoteThread()</span><br><span class="line">   </span><br><span class="line">5. 远程线程执行LoadLibrary</span><br><span class="line">   └─&gt; LoadLibrary(&quot;hook_dll.dll&quot;)</span><br><span class="line">   </span><br><span class="line">6. DLL加载，执行DllMain</span><br><span class="line">   └─&gt; DllMain(DLL_PROCESS_ATTACH)</span><br><span class="line">   </span><br><span class="line">7. 初始化Hook</span><br><span class="line">   └─&gt; install_hooks()</span><br></pre></td></tr></table></figure>
+
+<h2 id="DLL注入方法"><a href="#DLL注入方法" class="headerlink" title="DLL注入方法"></a>DLL注入方法</h2><h3 id="方法1：CreateRemoteThread-LoadLibrary"><a href="#方法1：CreateRemoteThread-LoadLibrary" class="headerlink" title="方法1：CreateRemoteThread + LoadLibrary"></a>方法1：CreateRemoteThread + LoadLibrary</h3><p>这是最常用的DLL注入方法，也是Packet Capture项目使用的方法。</p>
+<p><strong>优点</strong>：</p>
+<ul>
+<li>实现简单，兼容性好</li>
+<li>适用于大多数进程</li>
+</ul>
+<p><strong>缺点</strong>：</p>
+<ul>
+<li>可能被安全软件检测</li>
+<li>需要目标进程有LoadLibrary函数</li>
+</ul>
+<p><strong>实现步骤</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> windows::Win32::System::Threading::*;</span><br><span class="line"><span class="keyword">use</span> windows::Win32::System::Memory::*;</span><br><span class="line"><span class="keyword">use</span> windows::Win32::Foundation::*;</span><br><span class="line"></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">inject_dll</span>(process_id: <span class="type">u32</span>, dll_path: &amp;<span class="type">str</span>) <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;()&gt; &#123;</span><br><span class="line">    <span class="comment">// 1. 打开目标进程</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">process</span> = <span class="title function_ invoke__">OpenProcess</span>(</span><br><span class="line">        PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | </span><br><span class="line">        PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ,</span><br><span class="line">        <span class="literal">false</span>,</span><br><span class="line">        process_id,</span><br><span class="line">    )?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 2. 在目标进程中分配内存</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">dll_path_bytes</span> = dll_path.<span class="title function_ invoke__">as_bytes</span>();</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">memory</span> = <span class="title function_ invoke__">VirtualAllocEx</span>(</span><br><span class="line">        process,</span><br><span class="line">        <span class="literal">None</span>,</span><br><span class="line">        dll_path_bytes.<span class="title function_ invoke__">len</span>(),</span><br><span class="line">        MEM_COMMIT | MEM_RESERVE,</span><br><span class="line">        PAGE_READWRITE,</span><br><span class="line">    )?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 3. 将DLL路径写入目标进程内存</span></span><br><span class="line">    <span class="keyword">let</span> <span class="keyword">mut </span><span class="variable">written</span> = <span class="number">0</span>;</span><br><span class="line">    <span class="title function_ invoke__">WriteProcessMemory</span>(</span><br><span class="line">        process,</span><br><span class="line">        memory,</span><br><span class="line">        dll_path_bytes.<span class="title function_ invoke__">as_ptr</span>() <span class="keyword">as</span> *<span class="keyword">const</span> _,</span><br><span class="line">        dll_path_bytes.<span class="title function_ invoke__">len</span>(),</span><br><span class="line">        <span class="title function_ invoke__">Some</span>(&amp;<span class="keyword">mut</span> written),</span><br><span class="line">    )?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 4. 获取LoadLibraryA函数地址</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">kernel32</span> = <span class="title function_ invoke__">GetModuleHandleA</span>(<span class="string">&quot;kernel32.dll&quot;</span>)?;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">load_library</span> = <span class="title function_ invoke__">GetProcAddress</span>(kernel32, <span class="string">&quot;LoadLibraryA&quot;</span>)?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 5. 创建远程线程执行LoadLibrary</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">thread</span> = <span class="title function_ invoke__">CreateRemoteThread</span>(</span><br><span class="line">        process,</span><br><span class="line">        <span class="literal">None</span>,</span><br><span class="line">        <span class="number">0</span>,</span><br><span class="line">        <span class="title function_ invoke__">Some</span>(std::mem::<span class="title function_ invoke__">transmute</span>(load_library)),</span><br><span class="line">        <span class="title function_ invoke__">Some</span>(memory),</span><br><span class="line">        <span class="number">0</span>,</span><br><span class="line">        <span class="literal">None</span>,</span><br><span class="line">    )?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 6. 等待线程执行完成</span></span><br><span class="line">    <span class="title function_ invoke__">WaitForSingleObject</span>(thread, INFINITE)?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 7. 清理资源</span></span><br><span class="line">    <span class="title function_ invoke__">CloseHandle</span>(thread)?;</span><br><span class="line">    <span class="title function_ invoke__">VirtualFreeEx</span>(process, memory, <span class="number">0</span>, MEM_RELEASE)?;</span><br><span class="line">    <span class="title function_ invoke__">CloseHandle</span>(process)?;</span><br><span class="line">    </span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="方法2：SetWindowsHookEx"><a href="#方法2：SetWindowsHookEx" class="headerlink" title="方法2：SetWindowsHookEx"></a>方法2：SetWindowsHookEx</h3><p>通过Windows Hook机制注入DLL。</p>
+<p><strong>优点</strong>：</p>
+<ul>
+<li>隐蔽性较好</li>
+<li>可以注入到所有有窗口消息循环的进程</li>
+</ul>
+<p><strong>缺点</strong>：</p>
+<ul>
+<li>需要目标进程有窗口消息循环</li>
+<li>可能被Hook检测工具发现</li>
+</ul>
+<p><strong>实现步骤</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> windows::Win32::UI::WindowsAndMessaging::*;</span><br><span class="line"></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">inject_dll_hook</span>(dll_path: &amp;<span class="type">str</span>, thread_id: <span class="type">u32</span>) <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;()&gt; &#123;</span><br><span class="line">    <span class="comment">// 加载DLL到当前进程</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">dll</span> = <span class="title function_ invoke__">LoadLibraryA</span>(dll_path)?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 获取Hook函数地址</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">hook_proc</span> = <span class="title function_ invoke__">GetProcAddress</span>(dll, <span class="string">&quot;HookProc&quot;</span>)?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 安装Hook</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">hook</span> = <span class="title function_ invoke__">SetWindowsHookExA</span>(</span><br><span class="line">        WH_GETMESSAGE,</span><br><span class="line">        <span class="title function_ invoke__">Some</span>(std::mem::<span class="title function_ invoke__">transmute</span>(hook_proc)),</span><br><span class="line">        dll,</span><br><span class="line">        thread_id,</span><br><span class="line">    )?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 发送消息触发Hook</span></span><br><span class="line">    <span class="title function_ invoke__">PostThreadMessageA</span>(thread_id, WM_NULL, <span class="number">0</span>, <span class="number">0</span>)?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 卸载Hook</span></span><br><span class="line">    <span class="title function_ invoke__">UnhookWindowsHookEx</span>(hook)?;</span><br><span class="line">    </span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="方法3：Manual-DLL-Mapping"><a href="#方法3：Manual-DLL-Mapping" class="headerlink" title="方法3：Manual DLL Mapping"></a>方法3：Manual DLL Mapping</h3><p>手动映射DLL，绕过LoadLibrary检测。</p>
+<p><strong>优点</strong>：</p>
+<ul>
+<li>绕过LoadLibrary检测</li>
+<li>更隐蔽</li>
+</ul>
+<p><strong>缺点</strong>：</p>
+<ul>
+<li>实现复杂</li>
+<li>需要手动处理重定位、导入表等</li>
+</ul>
+<p>这种方法实现复杂，在Packet Capture项目中未使用，这里不做详细介绍。</p>
+<h2 id="项目中的DLL注入实现"><a href="#项目中的DLL注入实现" class="headerlink" title="项目中的DLL注入实现"></a>项目中的DLL注入实现</h2><h3 id="使用dll-syringe库"><a href="#使用dll-syringe库" class="headerlink" title="使用dll-syringe库"></a>使用dll-syringe库</h3><p>Packet Capture项目使用了<code>dll-syringe</code>库来简化DLL注入的实现。</p>
+<p><strong>为什么选择dll-syringe？</strong></p>
+<ol>
+<li><strong>API简洁</strong>：封装了复杂的Windows API调用</li>
+<li><strong>功能完整</strong>：支持注入和弹出（eject）</li>
+<li><strong>错误处理</strong>：提供清晰的错误信息</li>
+<li><strong>跨架构支持</strong>：支持32位和64位进程</li>
+</ol>
+<p><strong>实际代码示例</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> dll_syringe::&#123;process::OwnedProcess, Syringe&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">inject_hook_dll</span>(process_id: <span class="type">u32</span>) <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;<span class="type">String</span>&gt; &#123;</span><br><span class="line">    <span class="comment">// 打开目标进程</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">target_process</span> = OwnedProcess::<span class="title function_ invoke__">from_pid</span>(process_id)</span><br><span class="line">        .<span class="title function_ invoke__">map_err</span>(|e| <span class="built_in">format!</span>(<span class="string">&quot;无法打开进程: &#123;&#125;&quot;</span>, e))?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 创建注入器</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">syringe</span> = Syringe::for_process(target_process);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 获取DLL路径</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">dll_path</span> = <span class="title function_ invoke__">get_hook_dll_path</span>()?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 注入DLL</span></span><br><span class="line">    <span class="keyword">let</span> <span class="variable">injected_payload</span> = syringe.<span class="title function_ invoke__">inject</span>(dll_path)</span><br><span class="line">        .<span class="title function_ invoke__">map_err</span>(|e| <span class="built_in">format!</span>(<span class="string">&quot;注入失败: &#123;&#125;&quot;</span>, e))?;</span><br><span class="line">    </span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(<span class="built_in">format!</span>(<span class="string">&quot;注入成功，PID: &#123;&#125;&quot;</span>, injected_payload.<span class="title function_ invoke__">process_id</span>()))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="DLL入口点实现"><a href="#DLL入口点实现" class="headerlink" title="DLL入口点实现"></a>DLL入口点实现</h3><p>Hook DLL的入口点（DllMain）负责初始化Hook：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// hook-dll/src/lib.rs</span></span><br><span class="line"><span class="meta">#[no_mangle]</span></span><br><span class="line"><span class="meta">#[allow(non_snake_case)]</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">extern</span> <span class="string">&quot;stdcall&quot;</span> <span class="keyword">fn</span> <span class="title function_">DllMain</span>(</span><br><span class="line">    hinst_dll: HINSTANCE,</span><br><span class="line">    fdw_reason: <span class="type">u32</span>,</span><br><span class="line">    _lpv_reserved: *<span class="keyword">mut</span> std::ffi::c_void,</span><br><span class="line">) <span class="punctuation">-&gt;</span> BOOL &#123;</span><br><span class="line">    <span class="keyword">match</span> fdw_reason &#123;</span><br><span class="line">        DLL_PROCESS_ATTACH =&gt; &#123;</span><br><span class="line">            <span class="comment">// 初始化日志</span></span><br><span class="line">            env_logger::<span class="title function_ invoke__">init</span>();</span><br><span class="line">            </span><br><span class="line">            <span class="comment">// 初始化IPMB通信</span></span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">let</span> <span class="variable">Err</span>(e) = <span class="title function_ invoke__">init_packet_sender</span>() &#123;</span><br><span class="line">                error!(<span class="string">&quot;初始化IPMB失败: &#123;&#125;&quot;</span>, e);</span><br><span class="line">                <span class="keyword">return</span> FALSE;</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            <span class="comment">// 初始化Hook</span></span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">let</span> <span class="variable">Err</span>(e) = network_hook::<span class="title function_ invoke__">init_all_hooks</span>() &#123;</span><br><span class="line">                error!(<span class="string">&quot;初始化Hook失败: &#123;&#125;&quot;</span>, e);</span><br><span class="line">                <span class="keyword">return</span> FALSE;</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            info!(<span class="string">&quot;Hook DLL已加载到进程&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        DLL_PROCESS_DETACH =&gt; &#123;</span><br><span class="line">            <span class="comment">// 清理Hook</span></span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">let</span> <span class="variable">Err</span>(e) = network_hook::<span class="title function_ invoke__">cleanup_all_hooks</span>() &#123;</span><br><span class="line">                error!(<span class="string">&quot;清理Hook失败: &#123;&#125;&quot;</span>, e);</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            info!(<span class="string">&quot;Hook DLL已卸载&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        _ =&gt; &#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">    TRUE</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="架构匹配问题"><a href="#架构匹配问题" class="headerlink" title="架构匹配问题"></a>架构匹配问题</h2><h3 id="32位-vs-64位"><a href="#32位-vs-64位" class="headerlink" title="32位 vs 64位"></a>32位 vs 64位</h3><p>Windows系统的一个重要限制是：</p>
+<ul>
+<li><strong>32位进程只能注入32位DLL</strong></li>
+<li><strong>64位进程只能注入64位DLL</strong></li>
+</ul>
+<p><strong>解决方案</strong>：</p>
+<ol>
+<li><p><strong>编译两个版本的DLL</strong>：</p>
+<ul>
+<li><code>hook_dll_x86.dll</code>（32位）</li>
+<li><code>hook_dll_x64.dll</code>（64位）</li>
+</ul>
+</li>
+<li><p><strong>检测目标进程架构</strong>：</p>
+</li>
+</ol>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> windows::Win32::System::Diagnostics::ToolHelp::*;</span><br><span class="line"></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">is_process_64bit</span>(process_id: <span class="type">u32</span>) <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;<span class="type">bool</span>&gt; &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">process</span> = <span class="title function_ invoke__">OpenProcess</span>(PROCESS_QUERY_INFORMATION, <span class="literal">false</span>, process_id)?;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">let</span> <span class="keyword">mut </span><span class="variable">is_wow64</span> = <span class="literal">false</span>;</span><br><span class="line">    <span class="title function_ invoke__">IsWow64Process</span>(process, &amp;<span class="keyword">mut</span> is_wow64)?;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 如果进程是WOW64（32位进程运行在64位系统上），返回false</span></span><br><span class="line">    <span class="comment">// 否则是64位进程，返回true</span></span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(!is_wow64)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li><strong>根据架构选择DLL</strong>：</li>
+</ol>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">get_hook_dll_path</span>(process_id: <span class="type">u32</span>) <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;PathBuf&gt; &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">is_64bit</span> = <span class="title function_ invoke__">is_process_64bit</span>(process_id)?;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> is_64bit &#123;</span><br><span class="line">        <span class="title function_ invoke__">Ok</span>(PathBuf::<span class="title function_ invoke__">from</span>(<span class="string">&quot;hook_dll_x64.dll&quot;</span>))</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="title function_ invoke__">Ok</span>(PathBuf::<span class="title function_ invoke__">from</span>(<span class="string">&quot;hook_dll_x86.dll&quot;</span>))</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="安全与权限"><a href="#安全与权限" class="headerlink" title="安全与权限"></a>安全与权限</h2><h3 id="权限要求"><a href="#权限要求" class="headerlink" title="权限要求"></a>权限要求</h3><p>DLL注入需要以下权限：</p>
+<ol>
+<li><strong>管理员权限</strong>：大多数情况下需要管理员权限</li>
+<li><strong>调试权限</strong>：某些受保护进程需要<code>SeDebugPrivilege</code></li>
+</ol>
+<p><strong>获取调试权限</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> windows::Win32::System::Threading::*;</span><br><span class="line"><span class="keyword">use</span> windows::Win32::Foundation::*;</span><br><span class="line"></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">enable_debug_privilege</span>() <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;()&gt; &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">token</span> = <span class="title function_ invoke__">get_current_process_token</span>()?;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">let</span> <span class="keyword">mut </span><span class="variable">privileges</span> = TOKEN_PRIVILEGES &#123;</span><br><span class="line">        PrivilegeCount: <span class="number">1</span>,</span><br><span class="line">        Privileges: [LUID_AND_ATTRIBUTES &#123;</span><br><span class="line">            Luid: <span class="title function_ invoke__">lookup_privilege_value</span>(<span class="string">&quot;SeDebugPrivilege&quot;</span>)?,</span><br><span class="line">            Attributes: SE_PRIVILEGE_ENABLED,</span><br><span class="line">        &#125;],</span><br><span class="line">    &#125;;</span><br><span class="line">    </span><br><span class="line">    <span class="title function_ invoke__">AdjustTokenPrivileges</span>(token, <span class="literal">false</span>, <span class="title function_ invoke__">Some</span>(&amp;<span class="keyword">mut</span> privileges), <span class="number">0</span>, <span class="literal">None</span>, <span class="literal">None</span>)?;</span><br><span class="line">    </span><br><span class="line">    <span class="title function_ invoke__">Ok</span>(())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="进程保护"><a href="#进程保护" class="headerlink" title="进程保护"></a>进程保护</h3><p>某些进程受到保护，无法注入：</p>
+<ol>
+<li><strong>系统进程</strong>：如<code>csrss.exe</code>、<code>winlogon.exe</code>等</li>
+<li><strong>受保护进程</strong>：Windows Defender等安全软件保护的进程</li>
+<li><strong>内核进程</strong>：系统关键进程</li>
+</ol>
+<p><strong>检查进程是否可注入</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">can_inject_process</span>(process_id: <span class="type">u32</span>) <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;<span class="type">bool</span>&gt; &#123;</span><br><span class="line">    <span class="comment">// 检查是否是系统进程</span></span><br><span class="line">    <span class="keyword">if</span> <span class="title function_ invoke__">is_system_process</span>(process_id)? &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="title function_ invoke__">Ok</span>(<span class="literal">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 尝试打开进程</span></span><br><span class="line">    <span class="keyword">match</span> <span class="title function_ invoke__">OpenProcess</span>(PROCESS_CREATE_THREAD, <span class="literal">false</span>, process_id) &#123;</span><br><span class="line">        <span class="title function_ invoke__">Ok</span>(_) =&gt; <span class="title function_ invoke__">Ok</span>(<span class="literal">true</span>),</span><br><span class="line">        <span class="title function_ invoke__">Err</span>(_) =&gt; <span class="title function_ invoke__">Ok</span>(<span class="literal">false</span>),</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="错误处理与调试"><a href="#错误处理与调试" class="headerlink" title="错误处理与调试"></a>错误处理与调试</h2><h3 id="常见错误"><a href="#常见错误" class="headerlink" title="常见错误"></a>常见错误</h3><ol>
+<li><strong>权限不足</strong>：需要管理员权限</li>
+<li><strong>进程不存在</strong>：目标进程已退出</li>
+<li><strong>架构不匹配</strong>：32位&#x2F;64位不匹配</li>
+<li><strong>DLL路径错误</strong>：DLL文件不存在</li>
+<li><strong>进程保护</strong>：目标进程受保护</li>
+</ol>
+<h3 id="调试技巧"><a href="#调试技巧" class="headerlink" title="调试技巧"></a>调试技巧</h3><ol>
+<li><strong>日志输出</strong>：使用<code>env_logger</code>输出详细日志</li>
+<li><strong>错误信息</strong>：捕获并显示详细的错误信息</li>
+<li><strong>进程信息</strong>：打印目标进程的详细信息</li>
+<li><strong>DLL验证</strong>：验证DLL是否正确加载</li>
+</ol>
+<h2 id="性能考虑"><a href="#性能考虑" class="headerlink" title="性能考虑"></a>性能考虑</h2><h3 id="DLL注入的开销"><a href="#DLL注入的开销" class="headerlink" title="DLL注入的开销"></a>DLL注入的开销</h3><p>DLL注入本身的开销很小，主要开销在于：</p>
+<ol>
+<li><strong>Hook执行</strong>：每次网络函数调用都会执行Hook代码</li>
+<li><strong>数据传输</strong>：通过IPMB传输数据到主程序</li>
+<li><strong>内存分配</strong>：在目标进程中分配内存</li>
+</ol>
+<h3 id="优化策略"><a href="#优化策略" class="headerlink" title="优化策略"></a>优化策略</h3><ol>
+<li><strong>延迟初始化</strong>：只在需要时初始化Hook</li>
+<li><strong>批量传输</strong>：批量传输数据包，减少IPC开销</li>
+<li><strong>内存池</strong>：使用内存池减少分配开销</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>DLL注入是Packet Capture项目的核心技术之一。通过DLL注入，我们可以将Hook代码注入到目标进程中，从而拦截和监控其网络通信。</p>
+<p>在下一期博客中，我们将深入探讨API Hook技术，包括如何Hook Windows API，以及如何实现高性能的网络函数拦截。敬请期待！</p>
+<hr>
+<p><strong>相关链接</strong>：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://docs.rs/dll-syringe/">dll-syringe文档</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/api/">Windows API文档</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/blog/ten-process-injection-techniques-technical-survey-common-and-trending-process">进程注入技术</a></li>
+</ul>
+<p><strong>作者</strong>：wj-stack<br><strong>日期</strong>：2025年12月31日</p>
+</div>
+        </div>
+        
+            <div class="kratos-copyright text-center clearfix">
+                <span itemprop="copyrightNotice">本作品采用 <a rel="license nofollow" target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/">知识共享署名-相同方式共享 4.0 国际许可协议</a> 进行许可</span>
+            </div>
+        
+        <footer class="kratos-entry-footer clearfix">
+            
+            
+            
+                <div class="post-actions text-center clearfix" id="post-actions">
+                
+                    <a class="donate" href="javascript:;" onclick="krOpenDonateModal()"><i class="fa fa-bitcoin"></i> 打赏</a>
+                
+                
+                    <a class="share" href="javascript:;" onclick="krOpenShareModal()"><i class="fa fa-share-alt"></i> 分享</a>
+                
+                </div>
+            
+            <div class="footer-tag clearfix">
+                <div class="pull-left">
+                <i class="fa fa-tags"></i>
+                    <a class="tag-none-link" href="/tags/Packet-Capture/" rel="tag">Packet Capture</a>
+                </div>
+                <div class="pull-date">
+                    <time datetime="2025-12-31T02:50:41.363Z" itemprop="dateModified">最后编辑：2025-12-31</time>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+        <nav class="navigation post-navigation clearfix" role="navigation">
+            
+            <div class="nav-previous clearfix">
+                <a title=" 第二期：Packet Capture - 技术架构详解" href="/2025/12/31/第二期：Packet-Capture-技术架构详解/"><i class="fa fa-angle-left"></i> 上一篇</a>
+            </div>
+            
+            
+            <div class="nav-next clearfix">
+                <a title=" 第四期：Packet Capture - API Hook技术详解" href="/2025/12/31/第四期：Packet-Capture-API-Hook技术详解/">下一篇 <i class="fa fa-angle-right"></i></a>
+            </div>
+            
+        </nav>
+    
+    
+        <div class="comment-post">
+            
+        </div>
+    
+</article>
+
+        
+
+            </section>
+
+            
+                
+
+<section id="kratos-widget-area" class="col-md-4 hidden-xs hidden-sm">
+    <!-- 文章和页面根据splitter来分割，没有的话就从头开始设置为sticky -->
+    
+    
+                <aside id="krw-about" class="widget widget-kratos-about clearfix">
+    <div class="photo-background"></div>
+    <div class="photo-wrapper clearfix">
+        <div class="photo-wrapper-tip text-center">
+            <img class="about-photo" src="/images/user.svg" alt="wj-stack" loading="lazy" decoding="auto" />
+        </div>
+    </div>
+    <div class="textwidget">
+        <p class="text-center"></p>
+    </div>
+    <div class="site-meta">
+        <a class="meta-item" href="/archives/">
+            <span class="title">
+                文章
+            </span>
+            <span class="count">
+                18
+            </span>
+        </a>
+        <a class="meta-item" href="/categories/">
+            <span class="title">
+                分类
+            </span>
+            <span class="count">
+                0
+            </span>
+        </a>
+        <a class="meta-item" href="/tags/">
+            <span class="title">
+                标签
+            </span>
+            <span class="count">
+                2
+            </span>
+        </a>
+    </div>
+</aside>
+            
+                    <div class="sticky-area">
+                
+                
+
+            
+                
+  <aside id="krw-tags" class="widget widget-kratos-tags clearfix">
+    <h4 class="widget-title"><i class="fa fa-tags"></i>标签聚合</h4>
+      <div class="tag-clouds">
+        <a href="/tags/Packet-Capture/" style="font-size: 0.6em;">Packet Capture</a> <a href="/tags/Src/" style="font-size: 0.8em;">Src</a>
+      </div>
+  </aside>
+
+            
+                
+  <aside id="krw-posts" class="widget widget-kratos-posts">
+  <h4 class="widget-title"><i class="fa fa-file"></i>最新文章</h4>
+  <div class="tab-content">
+      <ul class="list-group">
+        
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%BA%94%E6%9C%9F%EF%BC%9APacket-Capture-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1%EF%BC%88IPMB%EF%BC%89/"><i class="fa fa-book"></i> 第五期：Packet Capture - 进程间通信（IPMB）</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E5%9B%9B%E6%9C%9F%EF%BC%9APacket-Capture-API-Hook%E6%8A%80%E6%9C%AF%E8%AF%A6%E8%A7%A3/"><i class="fa fa-book"></i> 第四期：Packet Capture - API Hook技术详解</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%B8%89%E6%9C%9F%EF%BC%9APacket-Capture-DLL%E6%B3%A8%E5%85%A5%E6%8A%80%E6%9C%AF%E6%B7%B1%E5%85%A5/"><i class="fa fa-book"></i> 第三期：Packet Capture - DLL注入技术深入</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%BA%8C%E6%9C%9F%EF%BC%9APacket-Capture-%E6%8A%80%E6%9C%AF%E6%9E%B6%E6%9E%84%E8%AF%A6%E8%A7%A3/"><i class="fa fa-book"></i> 第二期：Packet Capture - 技术架构详解</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%B8%80%E6%9C%9F%EF%BC%9APacket-Capture-%E9%A1%B9%E7%9B%AE%E4%BB%8B%E7%BB%8D%E4%B8%8E%E8%83%8C%E6%99%AF/"><i class="fa fa-book"></i> 第一期：Packet Capture - 项目介绍与背景</a>
+            
+          
+        
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+      </ul>
+  </div>
+  </aside>
+
+            
+    </div>
+</section>
+            
+
+        
+
+                </div>
+    </div>
+</div>
+
+<footer>
+    <div id="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 col-md-offset-3 footer-list text-center">
+                    <ul class="kratos-social-icons">
+                        
+                            <li>
+                                <a href="https://github.com/wj-stack" target="_blank" rel="nofollow">
+                                    <i class="fa fa-github"></i>
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="/atom.xml" target="_blank" rel="nofollow">
+                                    <i class="fa fa-rss"></i>
+                                </a>
+                            </li>
+                        
+                    </ul>
+                    <ul class="kratos-copyright">
+                        <div>
+                            <li>&copy; 2025 wj-stack 's Blog 版权所有.</li>
+                            <li>本站已在风雨中飘摇<span id="kr-since">Loading...</span></li>
+                        </div>
+                        <div>
+                            <li>自豪地使用 <a href="https://github.com/Candinya/Kratos-Rebirth" target="_blank">Kratos:Rebirth</a> 主题</li>
+                            <li>站点由 <a href="https://github.com/Candinya/Kratos-Rebirth/graphs/contributors" target="_blank">wj-stack</a> 用 <i class="fa fa-heart" style="color:#d43f57"></i> 搭建</li>
+                        </div>
+                        <!-- 额外的追加注入项 -->
+                        
+                            <div>
+                                
+                                    <li>由 <a href="https://hexo.io" target="_blank" rel="nofollow">Hexo</a> 强力驱动</li>
+                                
+                                    <li>在 <a href="https://github.io" target="_blank">Github Pages</a> 暖心托管</li>
+                                
+                            </div>
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="kr-tool text-center">
+            <div class="tool">
+                
+                    <div class="box search-box">
+                        <a href="/search">
+                            <span class="fa fa-search"></span>
+                        </a>
+                    </div>
+                
+                <div class="box theme-box" id="theme-toggle">
+                    <span class="fa fa-adjust"></span>
+                </div>
+            </div>
+            <div id="gotop-box" class="box gotop-box">
+                <span class="fa fa-chevron-up"></span>
+            </div>
+        </div>
+    </div>
+</footer>
+</div>
+</div>
+
+
+    <div id="kr-donate-modal" class="kr-modal">
+    <div class="kr-modal-bg" onclick="krCloseDonateModal()"></div>
+    <div class="kr-modal-content">
+        <div class="kr-modal-header">
+            <div class="kr-modal-icon">
+                <i class="fa fa-bitcoin"></i>
+            </div>
+            <div class="kr-modal-title">赞助喵</div>
+            <button class="kr-modal-close" onclick="krCloseDonateModal()">
+                <i class="fa fa-times-circle"></i>
+            </button>
+        </div>
+        <div class="kr-modal-body">
+            <div class="kr-donate-message">非常感谢您的喜欢！ <i class="fa fa-heart" style="color:#d43f57"></i></div>
+            <div class="kr-donate-qr" id="kr-donate-qr">
+                
+                    <img class="kr-donate-placeholder" src="https://dev.krt.moe/demo-assets/donate.webp" alt="赞助喵" />
+                
+            </div>
+            <div class="kr-donate-platforms">
+                
+                    
+                        <button class="kr-donate-platform-button" style="color: skyblue;" title="模拟支付" onclick="krDonateModalShowPlatformQR('example_payment', 'skyblue')">
+                            <i class="fa fa-credit-card"></i>
+                        </button>
+                    
+                
+            </div>
+        </div>
+    </div>
+</div>
+<script defer src="/js/kr-modal/donate.min.js"></script>
+
+
+
+
+    <div id="kr-share-modal" class="kr-modal">
+    <div class="kr-modal-bg" onclick="krCloseShareModal()"></div>
+    <div class="kr-modal-content">
+        <div class="kr-modal-header">
+            <div class="kr-modal-icon">
+                <i class="fa fa-share-alt"></i>
+            </div>
+            <div class="kr-modal-title">分享这一刻</div>
+            <button class="kr-modal-close" onclick="krCloseShareModal()">
+                <i class="fa fa-times-circle"></i>
+            </button>
+        </div>
+        <div class="kr-modal-body">
+            <div class="kr-share-message">让朋友们也来瞅瞅！</div>
+            <div class="kr-share-qr" id="kr-share-qr"></div>
+            <div class="kr-share-platforms">
+                
+                    <button class="kr-share-platform-button" style="color: #62b6e7;" title="喵窝" onclick="krShareModalOpenPlatform('https://nya.one/share?text=%3E%20$TITLE%0A%3E%0A%3E%20$SUMMARY%0A----%20$SITE%0A%0A$URL')">
+                        <svg fill="currentColor" width="18" height="18" viewBox="0 0 329 388"><path d="M0,36.226c0,-19.993 16.233,-36.226 36.226,-36.226c13.788,0 25.787,7.719 31.908,19.068l188.366,229.845l0,-111.259c-6.356,5.508 -14.645,8.843 -23.707,8.843c-19.994,0 -36.226,-16.232 -36.226,-36.226c-0,-8.551 2.968,-16.413 7.93,-22.613l-0.015,-0.013l56.614,-69.08c6.2,-11.073 18.047,-18.565 31.63,-18.565c19.994,0 36.227,16.233 36.227,36.226l-0,314.644c-0,19.994 -16.233,36.226 -36.227,36.226c-13.166,0 -24.701,-7.039 -31.044,-17.555l-189.229,-230.899l-0,212.228c-0,19.994 -16.233,36.226 -36.227,36.226c-19.993,0 -36.226,-16.232 -36.226,-36.226l0,-314.644Z" /></svg>
+                    </button>
+                
+            </div>
+        </div>
+    </div>
+</div>
+<script defer src="/js/kr-modal/share.min.js"></script>
+
+
+
+<!-- 额外的追加注入项 -->
+
+
+        <script>
+    if (!window.kr) {
+        window.kr = {};
+    }
+    window.kr.notMobile = (!(navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i)));
+    window.kr.siteRoot = "/";
+</script>
+
+
+  <script defer src="/vendors/nprogress@0.2.0/nprogress.js"></script>
+
+
+
+  <script defer src="/vendors/viewerjs@1.11.6/dist/viewer.min.js"></script>
+
+
+<script defer src="/js/kr-core.min.js"></script>
+
+
+  <script defer src="/js/kr-pjax.min.js"></script>
+
+
+<!-- 额外的追加注入项 -->
+
+
+    </body>
+</html>

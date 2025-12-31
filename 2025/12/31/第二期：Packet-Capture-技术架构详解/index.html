@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+  <!-- 元数据 -->
+  <meta charset="utf-8">
+  
+    <link rel="icon" href="/assets/favicon.png">
+  
+  
+  <title>第二期：Packet Capture - 技术架构详解 | wj-stack &#39;s Blog</title>
+  <link rel="canonical" href="https://wj-stack.github.io/2025/12/31/%E7%AC%AC%E4%BA%8C%E6%9C%9F%EF%BC%9APacket-Capture-%E6%8A%80%E6%9C%AF%E6%9E%B6%E6%9E%84%E8%AF%A6%E8%A7%A3/">
+  <meta name="author" content="wj-stack" />
+  <meta http-equiv="Cache-Control" content="no-transform" />
+  <meta http-equiv="Cache-Control" content="no-siteapp" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="robots" content="index,follow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="format-detection" content="telphone=no, email=no" />
+  
+    <meta name="keywords" content="Packet Capture" />
+  
+  <meta name="description" content="第二期：Packet Capture - 技术架构详解引言在上一期博客中，我们介绍了Packet Capture项目的基本情况和应用场景。本期我们将深入探讨项目的技术架构，包括整体架构设计、技术选型的原因，以及各个组件如何协同工作。 整体架构设计三层架构模型Packet Capture采用了经典的三层架构模型： 123456789101112131415161718┌───────────────">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第二期：Packet Capture - 技术架构详解">
+<meta property="og:url" content="https://wj-stack.github.io/2025/12/31/%E7%AC%AC%E4%BA%8C%E6%9C%9F%EF%BC%9APacket-Capture-%E6%8A%80%E6%9C%AF%E6%9E%B6%E6%9E%84%E8%AF%A6%E8%A7%A3/index.html">
+<meta property="og:site_name" content="wj-stack &#39;s Blog">
+<meta property="og:description" content="第二期：Packet Capture - 技术架构详解引言在上一期博客中，我们介绍了Packet Capture项目的基本情况和应用场景。本期我们将深入探讨项目的技术架构，包括整体架构设计、技术选型的原因，以及各个组件如何协同工作。 整体架构设计三层架构模型Packet Capture采用了经典的三层架构模型： 123456789101112131415161718┌───────────────">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-12-31T02:48:38.000Z">
+<meta property="article:modified_time" content="2025-12-31T02:49:23.326Z">
+<meta property="article:author" content="wj-stack">
+<meta property="article:tag" content="Packet Capture">
+<meta name="twitter:card" content="summary">
+  
+  <!-- 样式表文件 -->
+  <link rel="stylesheet" id="kratos-css" href="/css/kr-core.min.css" media="all"></link>
+  
+    <link rel="stylesheet" id="highlight-css" href="/css/highlight/highlight.js/night-eighties.min.css" media="all"></link>
+  
+  <link rel="stylesheet" id="theme-light-css" href="/css/kr-theme/light.min.css" media="all"></link>
+  <link rel="stylesheet" id="theme-dark-css" href="/css/kr-theme/dark.min.css" media="(prefers-color-scheme: dark)"></link>
+  <script src="/js/kr-theme.min.js"></script>
+  <link rel="stylesheet" id="fontawe-css" href="/vendors/font-awesome@4.7.0/css/font-awesome.min.css" media="all"></link>
+  
+    <link rel="stylesheet" id="nprogress-css" href="/vendors/nprogress@0.2.0/nprogress.css" media="all"></link>
+  
+  
+    <link rel="stylesheet" href="/vendors/viewerjs@1.11.6/dist/viewer.min.css"></link>
+  
+  <!-- 不得不预先加载的一些JS文件 -->
+  
+    <script src="/vendors/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+  
+  <!-- 自定义站点横幅和背景 -->
+  <style>
+    
+      .kratos-cover.kratos-cover-2 {
+        background-image: url('https://dev.krt.moe/demo-assets/banner.webp');
+      }
+      html[data-theme="dark"] .kratos-cover.kratos-cover-2 {
+        background-image: url('https://dev.krt.moe/demo-assets/banner_dark.webp');
+      }
+    
+    
+      @media(min-width:768px) {
+        body.custom-background {
+          background-image: url('https://dev.krt.moe/demo-assets/bg.webp');
+        }
+        html[data-theme="dark"] body.custom-background {
+          background-image: url('https://dev.krt.moe/demo-assets/bg.webp');
+        }
+      }
+    
+    
+      .widget-kratos-about .photo-background {
+        background-image: url('/images/default.webp');
+      }
+      html[data-theme="dark"] .widget-kratos-about .photo-background {
+        background-image: url('/images/default.webp');
+      }
+    
+  </style>
+
+  <!-- 额外的追加注入项 -->
+  
+<meta name="generator" content="Hexo 8.1.1"></head>
+
+    <body class="custom-background">
+        <div id="kratos-wrapper">
+    <div id="kratos-page">
+        <div id="kratos-header">
+            <header id="kratos-desktop-topnav" class="kratos-topnav">
+                <div class="container">
+                    <div class="nav-header">
+                        <nav id="kratos-menu-wrap">
+                            <ul id="kratos-primary-menu" class="sf-menu">
+                                
+                                    <li>
+                                        
+                                            <a href="/">
+                                        
+                                            
+                                                <i class="fa fa-home"></i>
+                                            
+                                            首页
+                                        </a>
+                                        
+                                    </li>
+                                
+                                    <li>
+                                        
+                                            <a href="/archives/">
+                                        
+                                            
+                                                <i class="fa fa-file"></i>
+                                            
+                                            档案馆
+                                        </a>
+                                        
+                                    </li>
+                                
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </header>
+            <header id="kratos-mobile-topnav" class="kratos-topnav">
+                <div class="container">
+                    <div class="color-logo"><a href="/">wj-stack &#39;s Blog</a></div>
+                    <div id="kratos-nav-toggle-wrapper" class="nav-toggle">
+                        <a id="kratos-nav-toggle" class="kratos-nav-toggle">
+                            <i></i>
+                        </a>
+                    </div>
+                </div>
+            </header>
+        </div>
+        <div class="kratos-start kratos-hero-2">
+            <!-- <div class="kratos-overlay"></div> -->
+            <div class="kratos-cover kratos-cover-2 text-center">
+                <div class="desc desc2 animate-box">
+                    <a href="/">
+                        <h2>wj-stack &#39;s Blog</h2> <br />
+                        <span></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div id="kratos-blog-post">
+            <div class="container">
+                <div id="main" class="row">
+
+
+        
+
+            
+
+            <section class="kr-main-col col-md-8">
+
+        
+
+            <article itemscope itemtype="https://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://wj-stack.github.io/2025/12/31/%E7%AC%AC%E4%BA%8C%E6%9C%9F%EF%BC%9APacket-Capture-%E6%8A%80%E6%9C%AF%E6%9E%B6%E6%9E%84%E8%AF%A6%E8%A7%A3/">
+    <div class="kratos-hentry kratos-page-inner clearfix">
+        <header class="kratos-page-header">
+            
+                <h1 class="kratos-page-title text-center" itemprop="name headline">第二期：Packet Capture - 技术架构详解</h1>
+            
+            <ul class="kratos-page-meta text-center">
+                <li><time datetime="2025-12-31T02:48:38.000Z" itemprop="datePublished"><i class="fa fa-calendar"></i> 2025-12-31</time></li>
+                <li itemprop="author" itemscope itemtype="https://schema.org/Person">
+                    <i class="fa fa-user"></i> 作者 <span itemprop="name">wj-stack</span>
+                </li>
+                
+                    <li>
+                        <i class="fa fa-edit"></i> 
+                        
+                        
+                            ~4.88K
+                        
+                        字
+                    </li>
+                
+                
+                
+            </ul>
+        </header>
+        <div class="kratos-page-content kr-post">
+            
+            
+            
+            <hr />
+            <div itemprop="articleBody"><h1 id="第二期：Packet-Capture-技术架构详解"><a href="#第二期：Packet-Capture-技术架构详解" class="headerlink" title="第二期：Packet Capture - 技术架构详解"></a>第二期：Packet Capture - 技术架构详解</h1><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>在上一期博客中，我们介绍了Packet Capture项目的基本情况和应用场景。本期我们将深入探讨项目的技术架构，包括整体架构设计、技术选型的原因，以及各个组件如何协同工作。</p>
+<h2 id="整体架构设计"><a href="#整体架构设计" class="headerlink" title="整体架构设计"></a>整体架构设计</h2><h3 id="三层架构模型"><a href="#三层架构模型" class="headerlink" title="三层架构模型"></a>三层架构模型</h3><p>Packet Capture采用了经典的三层架构模型：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────────────────────────┐</span><br><span class="line">│         前端层 (React + TypeScript)      │</span><br><span class="line">│  用户界面、数据展示、交互控制            │</span><br><span class="line">└─────────────────────────────────────────┘</span><br><span class="line">              ↕ Tauri IPC</span><br><span class="line">┌─────────────────────────────────────────┐</span><br><span class="line">│       后端层 (Tauri + Rust)              │</span><br><span class="line">│  进程管理、DLL注入、数据聚合              │</span><br><span class="line">└─────────────────────────────────────────┘</span><br><span class="line">              ↕ IPMB通信</span><br><span class="line">┌─────────────────────────────────────────┐</span><br><span class="line">│      Hook层 (Rust DLL + MinHook)         │</span><br><span class="line">│  网络函数拦截、数据捕获、协议解析          │</span><br><span class="line">└─────────────────────────────────────────┘</span><br><span class="line">              ↕ 系统调用</span><br><span class="line">┌─────────────────────────────────────────┐</span><br><span class="line">│      Windows API (WinSock2, WinHTTP)     │</span><br><span class="line">└─────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h3 id="数据流向"><a href="#数据流向" class="headerlink" title="数据流向"></a>数据流向</h3><p>数据在系统中的流动路径：</p>
+<ol>
+<li><strong>捕获阶段</strong>：目标进程调用网络函数 → Hook DLL拦截 → 捕获数据</li>
+<li><strong>传输阶段</strong>：Hook DLL → IPMB消息 → Tauri后端</li>
+<li><strong>处理阶段</strong>：Tauri后端解析数据 → 聚合处理 → 发送到前端</li>
+<li><strong>展示阶段</strong>：React前端接收数据 → 更新UI → 用户查看</li>
+</ol>
+<h2 id="技术选型详解"><a href="#技术选型详解" class="headerlink" title="技术选型详解"></a>技术选型详解</h2><h3 id="前端技术选型"><a href="#前端技术选型" class="headerlink" title="前端技术选型"></a>前端技术选型</h3><h4 id="React-19"><a href="#React-19" class="headerlink" title="React 19"></a>React 19</h4><p><strong>为什么选择React？</strong></p>
+<ol>
+<li><strong>生态成熟</strong>：React拥有庞大的生态系统，丰富的第三方库</li>
+<li><strong>组件化开发</strong>：便于构建复杂的UI界面</li>
+<li><strong>虚拟DOM</strong>：高效的DOM更新机制，适合实时数据展示</li>
+<li><strong>社区支持</strong>：大量教程和文档，问题容易解决</li>
+</ol>
+<p><strong>React 19的新特性</strong>：</p>
+<ul>
+<li>改进的并发渲染</li>
+<li>更好的TypeScript支持</li>
+<li>新的Hooks API</li>
+</ul>
+<h4 id="TypeScript"><a href="#TypeScript" class="headerlink" title="TypeScript"></a>TypeScript</h4><p><strong>为什么选择TypeScript？</strong></p>
+<ol>
+<li><strong>类型安全</strong>：编译时发现错误，减少运行时bug</li>
+<li><strong>IDE支持</strong>：更好的代码补全和重构支持</li>
+<li><strong>文档作用</strong>：类型定义本身就是最好的文档</li>
+<li><strong>团队协作</strong>：类型约束减少沟通成本</li>
+</ol>
+<h4 id="Ant-Design-6"><a href="#Ant-Design-6" class="headerlink" title="Ant Design 6"></a>Ant Design 6</h4><p><strong>为什么选择Ant Design？</strong></p>
+<ol>
+<li><strong>企业级组件</strong>：提供完整的UI组件库</li>
+<li><strong>设计规范</strong>：遵循统一的设计语言</li>
+<li><strong>开箱即用</strong>：减少UI开发时间</li>
+<li><strong>主题定制</strong>：支持主题定制，满足个性化需求</li>
+</ol>
+<h4 id="Tailwind-CSS-4"><a href="#Tailwind-CSS-4" class="headerlink" title="Tailwind CSS 4"></a>Tailwind CSS 4</h4><p><strong>为什么选择Tailwind CSS？</strong></p>
+<ol>
+<li><strong>实用优先</strong>：快速构建UI，无需编写大量CSS</li>
+<li><strong>性能优化</strong>：只包含使用的样式，减小打包体积</li>
+<li><strong>响应式设计</strong>：内置响应式工具类</li>
+<li><strong>可维护性</strong>：样式和组件在一起，易于维护</li>
+</ol>
+<h3 id="后端技术选型"><a href="#后端技术选型" class="headerlink" title="后端技术选型"></a>后端技术选型</h3><h4 id="Tauri-2-0"><a href="#Tauri-2-0" class="headerlink" title="Tauri 2.0"></a>Tauri 2.0</h4><p><strong>为什么选择Tauri而不是Electron？</strong></p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>Tauri</th>
+<th>Electron</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>打包体积</strong></td>
+<td>~5MB</td>
+<td>~100MB+</td>
+</tr>
+<tr>
+<td><strong>内存占用</strong></td>
+<td>低</td>
+<td>高</td>
+</tr>
+<tr>
+<td><strong>性能</strong></td>
+<td>优秀（Rust）</td>
+<td>良好（Node.js）</td>
+</tr>
+<tr>
+<td><strong>安全性</strong></td>
+<td>更好（Rust类型安全）</td>
+<td>一般</td>
+</tr>
+<tr>
+<td><strong>跨平台</strong></td>
+<td>支持</td>
+<td>支持</td>
+</tr>
+</tbody></table>
+<p><strong>Tauri的优势</strong>：</p>
+<ol>
+<li><strong>轻量级</strong>：打包体积小，内存占用低</li>
+<li><strong>性能优秀</strong>：使用Rust编写，性能接近原生应用</li>
+<li><strong>安全性高</strong>：Rust的内存安全特性，减少安全漏洞</li>
+<li><strong>现代化</strong>：支持最新的Web标准</li>
+</ol>
+<h4 id="Rust"><a href="#Rust" class="headerlink" title="Rust"></a>Rust</h4><p><strong>为什么选择Rust？</strong></p>
+<ol>
+<li><strong>内存安全</strong>：编译时保证内存安全，避免常见的内存错误</li>
+<li><strong>性能优秀</strong>：零成本抽象，性能接近C&#x2F;C++</li>
+<li><strong>并发安全</strong>：所有权系统保证并发安全</li>
+<li><strong>系统编程</strong>：适合编写系统级代码，如DLL注入、API Hook</li>
+</ol>
+<p><strong>Rust在项目中的应用</strong>：</p>
+<ul>
+<li><strong>Tauri后端</strong>：处理进程管理、DLL注入等系统操作</li>
+<li><strong>Hook DLL</strong>：编写高性能的Hook代码</li>
+<li><strong>协议解析</strong>：高效解析网络协议</li>
+</ul>
+<h3 id="Hook技术选型"><a href="#Hook技术选型" class="headerlink" title="Hook技术选型"></a>Hook技术选型</h3><h4 id="MinHook-RS"><a href="#MinHook-RS" class="headerlink" title="MinHook-RS"></a>MinHook-RS</h4><p><strong>为什么选择MinHook而不是其他Hook库？</strong></p>
+<p>我们对比了三种主流的Hook库：</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>MinHook</th>
+<th>Detours</th>
+<th>detour (纯Rust)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>许可</strong></td>
+<td>开源免费</td>
+<td>Express免费(仅x86)</td>
+<td>开源免费</td>
+</tr>
+<tr>
+<td><strong>x64支持</strong></td>
+<td>✅ 免费</td>
+<td>❌ 需付费</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>功能</strong></td>
+<td>基础但足够</td>
+<td>非常丰富</td>
+<td>基础</td>
+</tr>
+<tr>
+<td><strong>稳定性</strong></td>
+<td>优秀</td>
+<td>优秀</td>
+<td>良好</td>
+</tr>
+<tr>
+<td><strong>易用性</strong></td>
+<td>简单</td>
+<td>复杂</td>
+<td>简单</td>
+</tr>
+</tbody></table>
+<p><strong>选择MinHook的原因</strong>：</p>
+<ol>
+<li><strong>免费且支持x64</strong>：这是我们的核心需求</li>
+<li><strong>成熟稳定</strong>：经过大量项目验证</li>
+<li><strong>功能足够</strong>：满足我们的Hook需求</li>
+<li><strong>轻量级</strong>：代码量小，性能优秀</li>
+</ol>
+<h4 id="IPMB-Inter-Process-Message-Bus"><a href="#IPMB-Inter-Process-Message-Bus" class="headerlink" title="IPMB (Inter-Process Message Bus)"></a>IPMB (Inter-Process Message Bus)</h4><p><strong>为什么选择IPMB？</strong></p>
+<p>IPMB是一个高性能的进程间通信库，具有以下特点：</p>
+<ol>
+<li><strong>高性能</strong>：基于共享内存，性能优秀</li>
+<li><strong>类型安全</strong>：Rust类型系统保证类型安全</li>
+<li><strong>易用性</strong>：API简洁，易于使用</li>
+<li><strong>跨平台</strong>：支持Windows、Linux、macOS</li>
+</ol>
+<p><strong>IPMB在项目中的应用</strong>：</p>
+<ul>
+<li><strong>命令通道</strong>：Tauri后端 → Hook DLL（发送控制命令）</li>
+<li><strong>数据通道</strong>：Hook DLL → Tauri后端（传输捕获的数据）</li>
+</ul>
+<h2 id="核心模块设计"><a href="#核心模块设计" class="headerlink" title="核心模块设计"></a>核心模块设计</h2><h3 id="1-Hook-DLL模块"><a href="#1-Hook-DLL模块" class="headerlink" title="1. Hook DLL模块"></a>1. Hook DLL模块</h3><p>Hook DLL是项目的核心，负责拦截网络函数调用。</p>
+<p><strong>主要功能</strong>：</p>
+<ul>
+<li>DLL注入到目标进程</li>
+<li>Hook网络API（send&#x2F;recv&#x2F;WSASend等）</li>
+<li>捕获网络数据</li>
+<li>通过IPMB发送数据到主程序</li>
+</ul>
+<p><strong>关键代码结构</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// hook-dll/src/lib.rs</span></span><br><span class="line"><span class="meta">#[no_mangle]</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">extern</span> <span class="string">&quot;stdcall&quot;</span> <span class="keyword">fn</span> <span class="title function_">DllMain</span>(...) <span class="punctuation">-&gt;</span> <span class="type">bool</span> &#123;</span><br><span class="line">    <span class="comment">// DLL入口，初始化Hook</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// hook-dll/src/network_hook.rs</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="title function_">install_hooks</span>() <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;()&gt; &#123;</span><br><span class="line">    <span class="comment">// 安装各种网络API的Hook</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-Tauri后端模块"><a href="#2-Tauri后端模块" class="headerlink" title="2. Tauri后端模块"></a>2. Tauri后端模块</h3><p>Tauri后端作为中间层，连接前端和Hook DLL。</p>
+<p><strong>主要功能</strong>：</p>
+<ul>
+<li>进程枚举和管理</li>
+<li>DLL注入控制</li>
+<li>接收Hook DLL的数据</li>
+<li>数据聚合和处理</li>
+<li>向前端提供API</li>
+</ul>
+<p><strong>关键代码结构</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src-tauri/src/lib.rs</span></span><br><span class="line"><span class="meta">#[tauri::command]</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">async</span> <span class="keyword">fn</span> <span class="title function_">inject_dll</span>(process_id: <span class="type">u32</span>) <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;<span class="type">String</span>&gt; &#123;</span><br><span class="line">    <span class="comment">// DLL注入逻辑</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">#[tauri::command]</span></span><br><span class="line"><span class="keyword">pub</span> <span class="keyword">async</span> <span class="keyword">fn</span> <span class="title function_">start_capture</span>(process_id: <span class="type">u32</span>) <span class="punctuation">-&gt;</span> <span class="type">Result</span>&lt;<span class="type">String</span>&gt; &#123;</span><br><span class="line">    <span class="comment">// 开始抓包</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-React前端模块"><a href="#3-React前端模块" class="headerlink" title="3. React前端模块"></a>3. React前端模块</h3><p>React前端提供用户界面。</p>
+<p><strong>主要功能</strong>：</p>
+<ul>
+<li>进程列表展示</li>
+<li>抓包控制（开始&#x2F;停止）</li>
+<li>数据包列表展示</li>
+<li>数据包详情查看</li>
+<li>过滤和搜索</li>
+<li>数据导出</li>
+</ul>
+<p><strong>关键组件结构</strong>：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/App.tsx</span></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">App</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="comment">// 主应用组件</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// GameProxySnifferPro/App.tsx</span></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">GameProxySniffer</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="comment">// 游戏代理嗅探界面</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="通信机制详解"><a href="#通信机制详解" class="headerlink" title="通信机制详解"></a>通信机制详解</h2><h3 id="Tauri-IPC通信"><a href="#Tauri-IPC通信" class="headerlink" title="Tauri IPC通信"></a>Tauri IPC通信</h3><p><strong>前端 → 后端</strong>：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 前端调用后端命令</span></span><br><span class="line"><span class="keyword">import</span> &#123; invoke &#125; <span class="keyword">from</span> <span class="string">&#x27;@tauri-apps/api/core&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">await</span> <span class="title function_">invoke</span>(<span class="string">&#x27;inject_dll&#x27;</span>, &#123; <span class="attr">processId</span>: <span class="number">1234</span> &#125;);</span><br></pre></td></tr></table></figure>
+
+<p><strong>后端 → 前端</strong>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 后端发送事件到前端</span></span><br><span class="line"><span class="keyword">use</span> tauri::Manager;</span><br><span class="line"></span><br><span class="line">app.<span class="title function_ invoke__">emit_all</span>(<span class="string">&quot;packet-captured&quot;</span>, packet_data)?;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 前端监听事件</span></span><br><span class="line"><span class="keyword">import</span> &#123; listen &#125; <span class="keyword">from</span> <span class="string">&#x27;@tauri-apps/api/event&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="title function_">listen</span>(<span class="string">&#x27;packet-captured&#x27;</span>, <span class="function">(<span class="params">event</span>) =&gt;</span> &#123;</span><br><span class="line">  <span class="comment">// 处理数据包</span></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="IPMB通信"><a href="#IPMB通信" class="headerlink" title="IPMB通信"></a>IPMB通信</h3><p><strong>命令通道</strong> (<code>com.solar.command</code>)：</p>
+<p>Tauri后端 → Hook DLL</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 发送Hook控制命令</span></span><br><span class="line">ipmb::<span class="title function_ invoke__">send_command</span>(<span class="string">&quot;enable_send_hook&quot;</span>, &amp;config)?;</span><br></pre></td></tr></table></figure>
+
+<p><strong>数据通道</strong> (<code>com.solar.capture</code>)：</p>
+<p>Hook DLL → Tauri后端</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Hook DLL发送捕获的数据</span></span><br><span class="line">ipmb::<span class="title function_ invoke__">send_data</span>(<span class="string">&quot;packet&quot;</span>, &amp;packet_data)?;</span><br></pre></td></tr></table></figure>
+
+<h2 id="性能优化策略"><a href="#性能优化策略" class="headerlink" title="性能优化策略"></a>性能优化策略</h2><h3 id="1-异步处理"><a href="#1-异步处理" class="headerlink" title="1. 异步处理"></a>1. 异步处理</h3><p>使用Tokio异步运行时，避免阻塞：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">tokio::<span class="title function_ invoke__">spawn</span>(<span class="keyword">async</span> <span class="keyword">move</span> &#123;</span><br><span class="line">    <span class="comment">// 异步处理数据包</span></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-虚拟滚动"><a href="#2-虚拟滚动" class="headerlink" title="2. 虚拟滚动"></a>2. 虚拟滚动</h3><p>前端使用React Window实现虚拟滚动，只渲染可见的数据包：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">FixedSizeList</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;react-window&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="language-xml"><span class="tag">&lt;<span class="name">FixedSizeList</span></span></span></span><br><span class="line"><span class="tag"><span class="language-xml">  <span class="attr">height</span>=<span class="string">&#123;600&#125;</span></span></span></span><br><span class="line"><span class="tag"><span class="language-xml">  <span class="attr">itemCount</span>=<span class="string">&#123;packets.length&#125;</span></span></span></span><br><span class="line"><span class="tag"><span class="language-xml">  <span class="attr">itemSize</span>=<span class="string">&#123;50&#125;</span></span></span></span><br><span class="line"><span class="tag"><span class="language-xml">&gt;</span></span></span><br><span class="line"><span class="language-xml">  &#123;Row&#125;</span></span><br><span class="line"><span class="language-xml"><span class="tag">&lt;/<span class="name">FixedSizeList</span>&gt;</span></span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-数据采样"><a href="#3-数据采样" class="headerlink" title="3. 数据采样"></a>3. 数据采样</h3><p>高流量场景下，可以采样数据包，减少处理压力。</p>
+<h3 id="4-内存管理"><a href="#4-内存管理" class="headerlink" title="4. 内存管理"></a>4. 内存管理</h3><p>限制内存中保存的数据包数量，自动清理旧数据。</p>
+<h2 id="安全性考虑"><a href="#安全性考虑" class="headerlink" title="安全性考虑"></a>安全性考虑</h2><h3 id="1-权限控制"><a href="#1-权限控制" class="headerlink" title="1. 权限控制"></a>1. 权限控制</h3><ul>
+<li>DLL注入需要管理员权限</li>
+<li>检查目标进程是否受保护</li>
+<li>避免注入系统关键进程</li>
+</ul>
+<h3 id="2-错误处理"><a href="#2-错误处理" class="headerlink" title="2. 错误处理"></a>2. 错误处理</h3><ul>
+<li>完善的错误处理机制</li>
+<li>注入失败时的降级方案</li>
+<li>进程退出时的资源清理</li>
+</ul>
+<h3 id="3-数据安全"><a href="#3-数据安全" class="headerlink" title="3. 数据安全"></a>3. 数据安全</h3><ul>
+<li>捕获的数据仅在本地存储</li>
+<li>不发送数据到外部服务器</li>
+<li>用户可以选择清除数据</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Packet Capture的技术架构设计充分考虑了性能、安全性和可维护性。通过合理的技术选型和架构设计，我们实现了一个功能强大、性能优秀的网络抓包工具。</p>
+<p>在下一期博客中，我们将深入探讨DLL注入技术，包括DLL注入的原理、实现方法，以及在实际项目中如何应用。敬请期待！</p>
+<hr>
+<p><strong>相关链接</strong>：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/wj-stack/packet-capture">项目GitHub仓库</a></li>
+<li><a target="_blank" rel="noopener" href="https://tauri.app/">Tauri文档</a></li>
+<li><a target="_blank" rel="noopener" href="https://doc.rust-lang.org/">Rust文档</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/TsudaKageyu/minhook">MinHook项目</a></li>
+</ul>
+<p><strong>作者</strong>：wj-stack<br><strong>日期</strong>：2025年12月31日</p>
+</div>
+        </div>
+        
+            <div class="kratos-copyright text-center clearfix">
+                <span itemprop="copyrightNotice">本作品采用 <a rel="license nofollow" target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/">知识共享署名-相同方式共享 4.0 国际许可协议</a> 进行许可</span>
+            </div>
+        
+        <footer class="kratos-entry-footer clearfix">
+            
+            
+            
+                <div class="post-actions text-center clearfix" id="post-actions">
+                
+                    <a class="donate" href="javascript:;" onclick="krOpenDonateModal()"><i class="fa fa-bitcoin"></i> 打赏</a>
+                
+                
+                    <a class="share" href="javascript:;" onclick="krOpenShareModal()"><i class="fa fa-share-alt"></i> 分享</a>
+                
+                </div>
+            
+            <div class="footer-tag clearfix">
+                <div class="pull-left">
+                <i class="fa fa-tags"></i>
+                    <a class="tag-none-link" href="/tags/Packet-Capture/" rel="tag">Packet Capture</a>
+                </div>
+                <div class="pull-date">
+                    <time datetime="2025-12-31T02:49:23.326Z" itemprop="dateModified">最后编辑：2025-12-31</time>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+        <nav class="navigation post-navigation clearfix" role="navigation">
+            
+            <div class="nav-previous clearfix">
+                <a title=" 第一期：Packet Capture - 项目介绍与背景" href="/2025/12/31/第一期：Packet-Capture-项目介绍与背景/"><i class="fa fa-angle-left"></i> 上一篇</a>
+            </div>
+            
+            
+            <div class="nav-next clearfix">
+                <a title=" 第三期：Packet Capture - DLL注入技术深入" href="/2025/12/31/第三期：Packet-Capture-DLL注入技术深入/">下一篇 <i class="fa fa-angle-right"></i></a>
+            </div>
+            
+        </nav>
+    
+    
+        <div class="comment-post">
+            
+        </div>
+    
+</article>
+
+        
+
+            </section>
+
+            
+                
+
+<section id="kratos-widget-area" class="col-md-4 hidden-xs hidden-sm">
+    <!-- 文章和页面根据splitter来分割，没有的话就从头开始设置为sticky -->
+    
+    
+                <aside id="krw-about" class="widget widget-kratos-about clearfix">
+    <div class="photo-background"></div>
+    <div class="photo-wrapper clearfix">
+        <div class="photo-wrapper-tip text-center">
+            <img class="about-photo" src="/images/user.svg" alt="wj-stack" loading="lazy" decoding="auto" />
+        </div>
+    </div>
+    <div class="textwidget">
+        <p class="text-center"></p>
+    </div>
+    <div class="site-meta">
+        <a class="meta-item" href="/archives/">
+            <span class="title">
+                文章
+            </span>
+            <span class="count">
+                18
+            </span>
+        </a>
+        <a class="meta-item" href="/categories/">
+            <span class="title">
+                分类
+            </span>
+            <span class="count">
+                0
+            </span>
+        </a>
+        <a class="meta-item" href="/tags/">
+            <span class="title">
+                标签
+            </span>
+            <span class="count">
+                2
+            </span>
+        </a>
+    </div>
+</aside>
+            
+                    <div class="sticky-area">
+                
+                
+
+            
+                
+  <aside id="krw-tags" class="widget widget-kratos-tags clearfix">
+    <h4 class="widget-title"><i class="fa fa-tags"></i>标签聚合</h4>
+      <div class="tag-clouds">
+        <a href="/tags/Packet-Capture/" style="font-size: 0.6em;">Packet Capture</a> <a href="/tags/Src/" style="font-size: 0.8em;">Src</a>
+      </div>
+  </aside>
+
+            
+                
+  <aside id="krw-posts" class="widget widget-kratos-posts">
+  <h4 class="widget-title"><i class="fa fa-file"></i>最新文章</h4>
+  <div class="tab-content">
+      <ul class="list-group">
+        
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%BA%94%E6%9C%9F%EF%BC%9APacket-Capture-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1%EF%BC%88IPMB%EF%BC%89/"><i class="fa fa-book"></i> 第五期：Packet Capture - 进程间通信（IPMB）</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E5%9B%9B%E6%9C%9F%EF%BC%9APacket-Capture-API-Hook%E6%8A%80%E6%9C%AF%E8%AF%A6%E8%A7%A3/"><i class="fa fa-book"></i> 第四期：Packet Capture - API Hook技术详解</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%B8%89%E6%9C%9F%EF%BC%9APacket-Capture-DLL%E6%B3%A8%E5%85%A5%E6%8A%80%E6%9C%AF%E6%B7%B1%E5%85%A5/"><i class="fa fa-book"></i> 第三期：Packet Capture - DLL注入技术深入</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%BA%8C%E6%9C%9F%EF%BC%9APacket-Capture-%E6%8A%80%E6%9C%AF%E6%9E%B6%E6%9E%84%E8%AF%A6%E8%A7%A3/"><i class="fa fa-book"></i> 第二期：Packet Capture - 技术架构详解</a>
+            
+          
+        
+          
+          
+            <a class="list-group-item" href="/2025/12/31/%E7%AC%AC%E4%B8%80%E6%9C%9F%EF%BC%9APacket-Capture-%E9%A1%B9%E7%9B%AE%E4%BB%8B%E7%BB%8D%E4%B8%8E%E8%83%8C%E6%99%AF/"><i class="fa fa-book"></i> 第一期：Packet Capture - 项目介绍与背景</a>
+            
+          
+        
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+      </ul>
+  </div>
+  </aside>
+
+            
+    </div>
+</section>
+            
+
+        
+
+                </div>
+    </div>
+</div>
+
+<footer>
+    <div id="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 col-md-offset-3 footer-list text-center">
+                    <ul class="kratos-social-icons">
+                        
+                            <li>
+                                <a href="https://github.com/wj-stack" target="_blank" rel="nofollow">
+                                    <i class="fa fa-github"></i>
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="/atom.xml" target="_blank" rel="nofollow">
+                                    <i class="fa fa-rss"></i>
+                                </a>
+                            </li>
+                        
+                    </ul>
+                    <ul class="kratos-copyright">
+                        <div>
+                            <li>&copy; 2025 wj-stack 's Blog 版权所有.</li>
+                            <li>本站已在风雨中飘摇<span id="kr-since">Loading...</span></li>
+                        </div>
+                        <div>
+                            <li>自豪地使用 <a href="https://github.com/Candinya/Kratos-Rebirth" target="_blank">Kratos:Rebirth</a> 主题</li>
+                            <li>站点由 <a href="https://github.com/Candinya/Kratos-Rebirth/graphs/contributors" target="_blank">wj-stack</a> 用 <i class="fa fa-heart" style="color:#d43f57"></i> 搭建</li>
+                        </div>
+                        <!-- 额外的追加注入项 -->
+                        
+                            <div>
+                                
+                                    <li>由 <a href="https://hexo.io" target="_blank" rel="nofollow">Hexo</a> 强力驱动</li>
+                                
+                                    <li>在 <a href="https://github.io" target="_blank">Github Pages</a> 暖心托管</li>
+                                
+                            </div>
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="kr-tool text-center">
+            <div class="tool">
+                
+                    <div class="box search-box">
+                        <a href="/search">
+                            <span class="fa fa-search"></span>
+                        </a>
+                    </div>
+                
+                <div class="box theme-box" id="theme-toggle">
+                    <span class="fa fa-adjust"></span>
+                </div>
+            </div>
+            <div id="gotop-box" class="box gotop-box">
+                <span class="fa fa-chevron-up"></span>
+            </div>
+        </div>
+    </div>
+</footer>
+</div>
+</div>
+
+
+    <div id="kr-donate-modal" class="kr-modal">
+    <div class="kr-modal-bg" onclick="krCloseDonateModal()"></div>
+    <div class="kr-modal-content">
+        <div class="kr-modal-header">
+            <div class="kr-modal-icon">
+                <i class="fa fa-bitcoin"></i>
+            </div>
+            <div class="kr-modal-title">赞助喵</div>
+            <button class="kr-modal-close" onclick="krCloseDonateModal()">
+                <i class="fa fa-times-circle"></i>
+            </button>
+        </div>
+        <div class="kr-modal-body">
+            <div class="kr-donate-message">非常感谢您的喜欢！ <i class="fa fa-heart" style="color:#d43f57"></i></div>
+            <div class="kr-donate-qr" id="kr-donate-qr">
+                
+                    <img class="kr-donate-placeholder" src="https://dev.krt.moe/demo-assets/donate.webp" alt="赞助喵" />
+                
+            </div>
+            <div class="kr-donate-platforms">
+                
+                    
+                        <button class="kr-donate-platform-button" style="color: skyblue;" title="模拟支付" onclick="krDonateModalShowPlatformQR('example_payment', 'skyblue')">
+                            <i class="fa fa-credit-card"></i>
+                        </button>
+                    
+                
+            </div>
+        </div>
+    </div>
+</div>
+<script defer src="/js/kr-modal/donate.min.js"></script>
+
+
+
+
+    <div id="kr-share-modal" class="kr-modal">
+    <div class="kr-modal-bg" onclick="krCloseShareModal()"></div>
+    <div class="kr-modal-content">
+        <div class="kr-modal-header">
+            <div class="kr-modal-icon">
+                <i class="fa fa-share-alt"></i>
+            </div>
+            <div class="kr-modal-title">分享这一刻</div>
+            <button class="kr-modal-close" onclick="krCloseShareModal()">
+                <i class="fa fa-times-circle"></i>
+            </button>
+        </div>
+        <div class="kr-modal-body">
+            <div class="kr-share-message">让朋友们也来瞅瞅！</div>
+            <div class="kr-share-qr" id="kr-share-qr"></div>
+            <div class="kr-share-platforms">
+                
+                    <button class="kr-share-platform-button" style="color: #62b6e7;" title="喵窝" onclick="krShareModalOpenPlatform('https://nya.one/share?text=%3E%20$TITLE%0A%3E%0A%3E%20$SUMMARY%0A----%20$SITE%0A%0A$URL')">
+                        <svg fill="currentColor" width="18" height="18" viewBox="0 0 329 388"><path d="M0,36.226c0,-19.993 16.233,-36.226 36.226,-36.226c13.788,0 25.787,7.719 31.908,19.068l188.366,229.845l0,-111.259c-6.356,5.508 -14.645,8.843 -23.707,8.843c-19.994,0 -36.226,-16.232 -36.226,-36.226c-0,-8.551 2.968,-16.413 7.93,-22.613l-0.015,-0.013l56.614,-69.08c6.2,-11.073 18.047,-18.565 31.63,-18.565c19.994,0 36.227,16.233 36.227,36.226l-0,314.644c-0,19.994 -16.233,36.226 -36.227,36.226c-13.166,0 -24.701,-7.039 -31.044,-17.555l-189.229,-230.899l-0,212.228c-0,19.994 -16.233,36.226 -36.227,36.226c-19.993,0 -36.226,-16.232 -36.226,-36.226l0,-314.644Z" /></svg>
+                    </button>
+                
+            </div>
+        </div>
+    </div>
+</div>
+<script defer src="/js/kr-modal/share.min.js"></script>
+
+
+
+<!-- 额外的追加注入项 -->
+
+
+        <script>
+    if (!window.kr) {
+        window.kr = {};
+    }
+    window.kr.notMobile = (!(navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i)));
+    window.kr.siteRoot = "/";
+</script>
+
+
+  <script defer src="/vendors/nprogress@0.2.0/nprogress.js"></script>
+
+
+
+  <script defer src="/vendors/viewerjs@1.11.6/dist/viewer.min.js"></script>
+
+
+<script defer src="/js/kr-core.min.js"></script>
+
+
+  <script defer src="/js/kr-pjax.min.js"></script>
+
+
+<!-- 额外的追加注入项 -->
+
+
+    </body>
+</html>
